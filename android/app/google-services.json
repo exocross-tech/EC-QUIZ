@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "123456789012",
-    "project_id": "quiz-game-app-demo",
-    "storage_bucket": "quiz-game-app-demo.appspot.com"
+    "project_number": "179431012469",
+    "project_id": "quiz-game-app-3c75d",
+    "storage_bucket": "quiz-game-app-3c75d.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:123456789012:android:abcdef0123456789",
+        "mobilesdk_app_id": "1:179431012469:android:bdc479de9e6196e026e03c",
         "android_client_info": {
           "package_name": "com.private.quizapp"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDEMOKEYFORLOCALDEVANDTESTING1234567"
+          "current_key": "AIzaSyCas217mlZ6GLvtKsdezE2WmHt-R217Kco"
         }
       ],
       "services": {

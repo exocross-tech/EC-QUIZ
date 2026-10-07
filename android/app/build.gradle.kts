@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.private.quizapp"
+    namespace = "com.privategame.quizapp"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 

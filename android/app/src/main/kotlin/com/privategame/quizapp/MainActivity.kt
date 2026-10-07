@@ -1,4 +1,4 @@
-package com.private.quizapp
+package com.privategame.quizapp
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -41,11 +41,11 @@ class DefaultFirebaseOptions {
   // Placeholder Android Firebase configuration for com.private.quizapp.
   // Update with your actual credentials from Firebase Console -> Project Settings -> General -> Your apps
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDEMOKEYFORLOCALDEVANDTESTING1234567',
-    appId: '1:123456789012:android:abcdef0123456789',
-    messagingSenderId: '123456789012',
-    projectId: 'quiz-game-app-demo',
-    storageBucket: 'quiz-game-app-demo.appspot.com',
+    apiKey: 'AIzaSyCas217mlZ6GLvtKsdezE2WmHt-R217Kco',
+    appId: '1:179431012469:android:bdc479de9e6196e026e03c',
+    messagingSenderId: '179431012469',
+    projectId: 'quiz-game-app-3c75d',
+    storageBucket: 'quiz-game-app-3c75d.firebasestorage.app',
   );
 
   static const FirebaseOptions web = FirebaseOptions(
