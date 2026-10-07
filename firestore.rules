@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // 1. User Profiles
+    // Users can read any profile (for leaderboard/lobby display),
+    // but only the profile owner can write or update their profile.
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId);
+    }
+
+    // 2. Quizzes (Phase 2+)
+    match /quizzes/{quizId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.creatorId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.creatorId == request.auth.uid;
+    }
+
+    // 3. Contests (Phase 3+)
+    // Host has authority over contest state
+    match /contests/{contestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.hostId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.hostId == request.auth.uid;
+
+      // Contest participants list
+      match /participants/{participantId} {
+        allow read: if isAuthenticated();
+        allow write: if isOwner(participantId);
+      }
+
+      // Contest player submitted answers
+      match /answers/{answerId} {
+        allow read: if isAuthenticated();
+        // Player can only write once for their own participant ID
+        allow create: if isAuthenticated() 
+                      && request.resource.data.participantId == request.auth.uid;
+        // Cannot overwrite or tamper after submitting
+        allow update, delete: if false;
+      }
+    }
+  }
+}
