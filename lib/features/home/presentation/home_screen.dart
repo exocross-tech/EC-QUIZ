@@ -187,15 +187,8 @@ class HomeScreen extends ConsumerWidget {
                 subtitle: 'Create questions, compressed images, and timer rules',
                 icon: Icons.quiz_outlined,
                 color: AppColors.gameGreen,
-                buttonText: 'Create Quiz (Phase 2)',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Quiz Studio & Builder will be unlocked in Phase 2!'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
+                buttonText: 'Open Quiz Studio',
+                onTap: () => context.push('/quizzes'),
               ),
               const SizedBox(height: 14),
 

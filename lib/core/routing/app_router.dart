@@ -5,6 +5,8 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/quiz/presentation/quiz_editor_screen.dart';
+import '../../features/quiz/presentation/quiz_list_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
@@ -45,6 +47,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/quizzes',
+        builder: (context, state) => const QuizListScreen(),
+      ),
+      GoRoute(
+        path: '/quiz/new',
+        builder: (context, state) => const QuizEditorScreen(),
+      ),
+      GoRoute(
+        path: '/quiz/edit/:quizId',
+        builder: (context, state) {
+          final quizId = state.pathParameters['quizId'];
+          return QuizEditorScreen(quizId: quizId);
+        },
       ),
     ],
   );

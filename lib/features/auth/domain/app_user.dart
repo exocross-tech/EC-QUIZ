@@ -9,6 +9,8 @@ class AppUser {
     this.displayName,
   });
 
+  String get id => uid;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
