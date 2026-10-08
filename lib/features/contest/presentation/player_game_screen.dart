@@ -92,6 +92,7 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Text(
           contestAsync.asData?.value?.quizTitle ?? 'Live Contest',
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),

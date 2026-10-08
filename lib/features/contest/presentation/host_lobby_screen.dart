@@ -26,6 +26,12 @@ class HostLobbyScreen extends ConsumerWidget {
     final participantsAsync = ref.watch(participantsStreamProvider(contestId));
     final hostController = ref.read(hostContestControllerProvider.notifier);
 
+    // If game has started, return HostGameScreen directly (single navbar, no nested Scaffold)
+    final contest = contestAsync.asData?.value;
+    if (contest != null && contest.status == ContestStatus.inProgress) {
+      return HostGameScreen(contestId: contestId);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Live Lobby (Host)', style: TextStyle(fontWeight: FontWeight.bold)),

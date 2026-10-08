@@ -11,6 +11,7 @@ import 'package:quizapp/features/contest/presentation/widgets/answer_distributio
 import 'package:quizapp/features/contest/presentation/widgets/leaderboard_view.dart';
 import 'package:quizapp/features/contest/presentation/widgets/participant_avatar_card.dart';
 import 'package:quizapp/features/contest/presentation/widgets/podium_view.dart';
+import 'package:quizapp/features/contest/presentation/widgets/qr_code_dialog.dart';
 
 class HostGameScreen extends ConsumerStatefulWidget {
   final String contestId;
@@ -78,11 +79,27 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Text(
           contestAsync.asData?.value?.quizTitle ?? 'Live Contest',
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code_2),
+            tooltip: 'Show Join Code & QR',
+            onPressed: () {
+              final contest = contestAsync.asData?.value;
+              if (contest != null) {
+                QrCodeDialog.show(
+                  context: context,
+                  joinCode: contest.joinCode,
+                  quizTitle: contest.quizTitle,
+                  pin: contest.pin,
+                );
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.people_outline),
             tooltip: 'View / Kick Players',

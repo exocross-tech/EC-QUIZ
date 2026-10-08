@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/avatar_display.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../../core/theme/theme_controller.dart';
 import 'edit_profile_dialog.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -37,6 +38,8 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(currentUserProfileProvider);
     final theme = Theme.of(context);
+    final currentThemeMode = ref.watch(themeModeControllerProvider);
+    final isDarkMode = currentThemeMode == ThemeMode.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -185,28 +188,70 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // Cloud Storage & Spark Plan Note
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.accent.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+                // Theme Preference Card
+                Card(
+                  elevation: 0,
+                  color: theme.colorScheme.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: BorderSide(color: Colors.grey.withValues(alpha: 0.15)),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.bolt, color: AppColors.accent, size: 28),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Zero-cost Firebase Spark plan enabled. On-device compression keeps all avatars below 200 KB in Firestore.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.textTheme.bodyMedium?.color,
-                            fontWeight: FontWeight.w600,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: isDarkMode
+                                ? AppColors.primary.withValues(alpha: 0.2)
+                                : AppColors.gameYellow.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                            color: isDarkMode ? AppColors.primaryContainer : AppColors.gameYellow,
+                            size: 24,
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Theme Preference',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isDarkMode ? 'Dark Theme active' : 'Light Theme active',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch(
+                          value: isDarkMode,
+                          activeTrackColor: AppColors.primary,
+                          thumbIcon: WidgetStateProperty.resolveWith<Icon?>((states) {
+                            if (states.contains(WidgetState.selected)) {
+                              return const Icon(Icons.dark_mode, size: 16, color: Colors.white);
+                            }
+                            return const Icon(Icons.light_mode, size: 16, color: Colors.amber);
+                          }),
+                          onChanged: (val) {
+                            ref
+                                .read(themeModeControllerProvider.notifier)
+                                .setThemeMode(val ? ThemeMode.dark : ThemeMode.light);
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 28),

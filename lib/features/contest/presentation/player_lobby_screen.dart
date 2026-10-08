@@ -33,6 +33,12 @@ class _PlayerLobbyScreenState extends ConsumerState<PlayerLobbyScreen> {
     final contestAsync = ref.watch(contestStreamProvider(widget.contestId));
     final participantsAsync = ref.watch(participantsStreamProvider(widget.contestId));
 
+    // If game has started, return PlayerGameScreen directly (single navbar, no nested Scaffold)
+    final contest = contestAsync.asData?.value;
+    if (contest != null && (contest.status == ContestStatus.inProgress || contest.stage == ContestStage.podium)) {
+      return PlayerGameScreen(contestId: widget.contestId);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Game Lobby', style: TextStyle(fontWeight: FontWeight.bold)),

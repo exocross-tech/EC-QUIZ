@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_controller.dart';
 import 'core/routing/app_router.dart';
 import 'core/constants/app_constants.dart';
 
@@ -43,12 +44,14 @@ class QuizApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeControllerProvider);
+
     if (!firebaseInitialized) {
       return MaterialApp(
         title: AppConstants.appName,
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
-        themeMode: ThemeMode.system,
+        themeMode: themeMode,
         home: _FirebaseSetupRequiredScreen(error: initError),
       );
     }
@@ -60,7 +63,7 @@ class QuizApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
       routerConfig: router,
     );
   }
