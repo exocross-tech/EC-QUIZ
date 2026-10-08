@@ -145,9 +145,12 @@ class LeaderboardView extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 2),
-                    Row(
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        if (participant.streak >= 2) ...[
+                        if (participant.streak >= 2)
                           Text(
                             '🔥 ${participant.streak} streak',
                             style: const TextStyle(
@@ -156,11 +159,9 @@ class LeaderboardView extends StatelessWidget {
                               color: Colors.deepOrange,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                        ],
                         if (participant.lastPointsEarned > 0)
                           Text(
-                            '+${participant.lastPointsEarned} pts this round',
+                            '+${participant.lastPointsEarned} pts',
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
