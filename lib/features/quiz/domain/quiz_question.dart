@@ -43,9 +43,11 @@ class QuizQuestion {
   final int timeLimitSeconds;
   final int basePoints;
   final String? explanation;
-  final String? imageBase64;
+  final List<String> imagesBase64;
 
-  const QuizQuestion({
+  String? get imageBase64 => imagesBase64.isNotEmpty ? imagesBase64.first : null;
+
+  QuizQuestion({
     required this.id,
     required this.text,
     this.type = QuestionType.multipleChoice,
@@ -54,8 +56,9 @@ class QuizQuestion {
     this.timeLimitSeconds = 20,
     this.basePoints = 1000,
     this.explanation,
-    this.imageBase64,
-  });
+    List<String>? imagesBase64,
+    String? imageBase64,
+  }) : imagesBase64 = imagesBase64 ?? (imageBase64 != null ? [imageBase64] : const []);
 
   /// Factory to generate a fresh, blank multiple-choice question
   factory QuizQuestion.empty() {
@@ -68,7 +71,7 @@ class QuizQuestion {
       timeLimitSeconds: 20,
       basePoints: 1000,
       explanation: null,
-      imageBase64: null,
+      imagesBase64: const [],
     );
   }
 
@@ -81,9 +84,21 @@ class QuizQuestion {
     int? timeLimitSeconds,
     int? basePoints,
     String? explanation,
+    List<String>? imagesBase64,
     String? imageBase64,
     bool clearImage = false,
   }) {
+    List<String> newImages;
+    if (clearImage) {
+      newImages = const [];
+    } else if (imagesBase64 != null) {
+      newImages = imagesBase64;
+    } else if (imageBase64 != null) {
+      newImages = [imageBase64];
+    } else {
+      newImages = this.imagesBase64;
+    }
+
     return QuizQuestion(
       id: id ?? this.id,
       text: text ?? this.text,
@@ -93,7 +108,7 @@ class QuizQuestion {
       timeLimitSeconds: timeLimitSeconds ?? this.timeLimitSeconds,
       basePoints: basePoints ?? this.basePoints,
       explanation: explanation ?? this.explanation,
-      imageBase64: clearImage ? null : (imageBase64 ?? this.imageBase64),
+      imagesBase64: newImages,
     );
   }
 
@@ -145,8 +160,8 @@ class QuizQuestion {
     if (explanation != null) {
       size += utf8.encode(explanation!).length;
     }
-    if (imageBase64 != null) {
-      size += imageBase64!.length;
+    for (final img in imagesBase64) {
+      size += img.length;
     }
     return size;
   }
@@ -161,11 +176,22 @@ class QuizQuestion {
       'timeLimitSeconds': timeLimitSeconds,
       'basePoints': basePoints,
       'explanation': explanation?.trim(),
+      'imagesBase64': imagesBase64,
       'imageBase64': imageBase64,
     };
   }
 
   factory QuizQuestion.fromMap(Map<String, dynamic> map) {
+    final rawImages = map['imagesBase64'] as List<dynamic>?;
+    final List<String> parsedImages;
+    if (rawImages != null) {
+      parsedImages = rawImages.map((e) => e.toString()).toList();
+    } else if (map['imageBase64'] != null) {
+      parsedImages = [map['imageBase64'] as String];
+    } else {
+      parsedImages = const [];
+    }
+
     return QuizQuestion(
       id: map['id'] as String? ?? const Uuid().v4(),
       text: map['text'] as String? ?? '',
@@ -181,7 +207,7 @@ class QuizQuestion {
       timeLimitSeconds: (map['timeLimitSeconds'] as num?)?.toInt() ?? 20,
       basePoints: (map['basePoints'] as num?)?.toInt() ?? 1000,
       explanation: map['explanation'] as String?,
-      imageBase64: map['imageBase64'] as String?,
+      imagesBase64: parsedImages,
     );
   }
 }

@@ -41,7 +41,12 @@ class _PlayerLobbyScreenState extends ConsumerState<PlayerLobbyScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Game Lobby', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Game Lobby',
+          style: TextStyle(fontWeight: FontWeight.bold),
+          overflow: TextOverflow.ellipsis,
+        ),
+        centerTitle: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.exit_to_app),

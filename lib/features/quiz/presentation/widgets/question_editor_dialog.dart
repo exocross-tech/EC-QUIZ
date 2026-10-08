@@ -47,7 +47,7 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
   late List<int> _correctAnswers;
   late int _timeLimitSeconds;
   late int _basePoints;
-  String? _imageBase64;
+  late List<String> _imagesBase64;
   bool _isCompressingImage = false;
   String? _imageError;
 
@@ -80,7 +80,7 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
         TextEditingController(text: widget.question.explanation ?? '');
     _timeLimitSeconds = widget.question.timeLimitSeconds;
     _basePoints = widget.question.basePoints;
-    _imageBase64 = widget.question.imageBase64;
+    _imagesBase64 = List<String>.from(widget.question.imagesBase64);
     _correctAnswers = List.from(widget.question.correctAnswers);
 
     final initialOpts = widget.question.options.isEmpty
@@ -101,6 +101,13 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
   }
 
   Future<void> _pickAndCompressImage(ImageSource source) async {
+    if (_imagesBase64.length >= 4) {
+      setState(() {
+        _imageError = 'Maximum of 4 images allowed per question.';
+      });
+      return;
+    }
+
     setState(() {
       _isCompressingImage = true;
       _imageError = null;
@@ -127,7 +134,7 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
       );
 
       setState(() {
-        _imageBase64 = base64String;
+        _imagesBase64.add(base64String);
         _isCompressingImage = false;
       });
     } catch (e) {
@@ -136,6 +143,14 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
         _imageError = e.toString().replaceFirst('Exception: ', '');
       });
     }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      if (index >= 0 && index < _imagesBase64.length) {
+        _imagesBase64.removeAt(index);
+      }
+    });
   }
 
   void _addOption() {
@@ -212,8 +227,8 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
       timeLimitSeconds: _timeLimitSeconds,
       basePoints: _basePoints,
       explanation: explanation.isNotEmpty ? explanation : null,
-      imageBase64: _imageBase64,
-      clearImage: _imageBase64 == null,
+      imagesBase64: _imagesBase64,
+      clearImage: _imagesBase64.isEmpty,
     );
 
     widget.onSave(updated);
@@ -225,8 +240,6 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
     final theme = Theme.of(context);
     final mediaQuery = MediaQuery.of(context);
     final maxHeight = mediaQuery.size.height * 0.92;
-    final Uint8List? imageBytes =
-        _imageBase64 != null ? ImageUtils.base64ToBytes(_imageBase64) : null;
 
     return Container(
       constraints: BoxConstraints(maxHeight: maxHeight),
@@ -315,27 +328,132 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
                   ),
                   const SizedBox(height: 18),
 
-                  // 2. Question Image (Compressed base64 in Firestore)
-                  Text(
-                    'Question Image (Optional, compressed under 200 KB)',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  // 2. Question Images (Compressed base64 in Firestore, max 4)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Question Images (Optional, max 4)',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (_imagesBase64.isNotEmpty)
+                        Text(
+                          '${_imagesBase64.length}/4',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 8),
 
+                  if (_imagesBase64.isNotEmpty) ...[
+                    SizedBox(
+                      height: 104,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _imagesBase64.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 10),
+                        itemBuilder: (context, index) {
+                          final bytes = ImageUtils.base64ToBytes(_imagesBase64[index]);
+                          final sizeKb = bytes != null
+                              ? (bytes.lengthInBytes / 1024).toStringAsFixed(1)
+                              : '0';
+                          return Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: 90,
+                                height: 100,
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: theme.colorScheme.outlineVariant,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: const BorderRadius.vertical(
+                                          top: Radius.circular(11),
+                                        ),
+                                        child: bytes != null
+                                            ? Image.memory(
+                                                bytes,
+                                                width: double.infinity,
+                                                fit: BoxFit.cover,
+                                                gaplessPlayback: true,
+                                              )
+                                            : const Icon(Icons.broken_image, size: 28),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 3,
+                                        horizontal: 4,
+                                      ),
+                                      child: Text(
+                                        '$sizeKb KB',
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Positioned(
+                                top: -6,
+                                right: -6,
+                                child: InkWell(
+                                  onTap: () => _removeImage(index),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.gameRed,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+
                   if (_isCompressingImage)
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surface,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: theme.colorScheme.outlineVariant),
                       ),
-                      child: const Column(
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 10),
+                          SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          SizedBox(width: 12),
                           Text(
                             'Compressing image under 200 KB...',
                             style: TextStyle(fontSize: 12),
@@ -343,63 +461,7 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
                         ],
                       ),
                     )
-                  else if (imageBytes != null)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: theme.colorScheme.outlineVariant),
-                      ),
-                      child: Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.memory(
-                              imageBytes,
-                              width: 80,
-                              height: 80,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Size: ${(imageBytes.lengthInBytes / 1024).toStringAsFixed(1)} KB',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'Stored in Firestore doc',
-                                  style: TextStyle(fontSize: 11, color: Colors.grey),
-                                ),
-                                const SizedBox(height: 8),
-                                OutlinedButton.icon(
-                                  onPressed: () => setState(() => _imageBase64 = null),
-                                  icon: const Icon(Icons.delete_outline,
-                                      size: 16, color: AppColors.gameRed),
-                                  label: const Text(
-                                    'Remove',
-                                    style: TextStyle(
-                                        fontSize: 12, color: AppColors.gameRed),
-                                  ),
-                                  style: OutlinedButton.styleFrom(
-                                    visualDensity: VisualDensity.compact,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
+                  else if (_imagesBase64.length < 4)
                     Row(
                       children: [
                         Expanded(
@@ -407,7 +469,10 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
                             onPressed: () =>
                                 _pickAndCompressImage(ImageSource.camera),
                             icon: const Icon(Icons.camera_alt, size: 18),
-                            label: const Text('Camera'),
+                            label: Text(
+                              _imagesBase64.isEmpty ? 'Camera' : 'Add Image',
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -416,7 +481,10 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
                             onPressed: () =>
                                 _pickAndCompressImage(ImageSource.gallery),
                             icon: const Icon(Icons.photo_library, size: 18),
-                            label: const Text('Gallery'),
+                            label: Text(
+                              _imagesBase64.isEmpty ? 'Gallery' : 'Add Image',
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ),
                       ],

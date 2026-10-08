@@ -12,6 +12,7 @@ import 'package:quizapp/features/contest/presentation/controllers/player_game_co
 import 'package:quizapp/features/contest/presentation/widgets/answer_distribution_chart.dart';
 import 'package:quizapp/features/contest/presentation/widgets/leaderboard_view.dart';
 import 'package:quizapp/features/contest/presentation/widgets/podium_view.dart';
+import 'package:quizapp/core/widgets/question_image_gallery.dart';
 
 class PlayerGameScreen extends ConsumerStatefulWidget {
   final String contestId;
@@ -348,26 +349,10 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
                       fontSize: 18,
                     ),
                   ),
-                  if (question?.imageBase64 != null) ...[
-                    Builder(
-                      builder: (context) {
-                        final imageBytes = ImageUtils.base64ToBytes(question!.imageBase64!);
-                        if (imageBytes == null) return const SizedBox.shrink();
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxHeight: 160),
-                              child: Image.memory(
-                                imageBytes,
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                  // Optional Image(s)
+                  if (question != null && question.imagesBase64.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    QuestionImageGallery(imagesBase64: question.imagesBase64),
                   ],
                   const SizedBox(height: 20),
 

@@ -11,6 +11,7 @@ import 'package:quizapp/features/contest/presentation/widgets/answer_distributio
 import 'package:quizapp/features/contest/presentation/widgets/leaderboard_view.dart';
 import 'package:quizapp/features/contest/presentation/widgets/participant_avatar_card.dart';
 import 'package:quizapp/features/contest/presentation/widgets/podium_view.dart';
+import 'package:quizapp/core/widgets/question_image_gallery.dart';
 import 'package:quizapp/features/contest/presentation/widgets/qr_code_dialog.dart';
 
 class HostGameScreen extends ConsumerStatefulWidget {
@@ -272,27 +273,10 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
                     ),
                   ),
 
-                  // Optional Image
-                  if (question?.imageBase64 != null) ...[
-                    Builder(
-                      builder: (context) {
-                        final imageBytes = ImageUtils.base64ToBytes(question!.imageBase64!);
-                        if (imageBytes == null) return const SizedBox.shrink();
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxHeight: 180),
-                              child: Image.memory(
-                                imageBytes,
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                  // Optional Image(s)
+                  if (question != null && question.imagesBase64.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    QuestionImageGallery(imagesBase64: question.imagesBase64),
                   ],
                   const SizedBox(height: 20),
 

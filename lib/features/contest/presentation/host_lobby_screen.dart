@@ -34,7 +34,12 @@ class HostLobbyScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Live Lobby (Host)', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Live Lobby (Host)',
+          style: TextStyle(fontWeight: FontWeight.bold),
+          overflow: TextOverflow.ellipsis,
+        ),
+        centerTitle: false,
         actions: [
           contestAsync.when(
             loading: () => const SizedBox.shrink(),

@@ -103,6 +103,44 @@ void main() {
       expect(valid.validationError, isNull);
     });
 
+    test('Supports multiple images and maintains backward compatibility', () {
+      final multiImageQuestion = QuizQuestion(
+        id: 'q-multi',
+        text: 'Identify all these landmarks',
+        options: const ['Paris', 'Rome', 'London', 'Berlin'],
+        correctAnswers: const [0, 1],
+        imagesBase64: const ['img1_data', 'img2_data', 'img3_data'],
+      );
+
+      expect(multiImageQuestion.imagesBase64.length, 3);
+      expect(multiImageQuestion.imageBase64, 'img1_data');
+
+      final map = multiImageQuestion.toMap();
+      expect(map['imagesBase64'], ['img1_data', 'img2_data', 'img3_data']);
+      expect(map['imageBase64'], 'img1_data');
+
+      final fromMap = QuizQuestion.fromMap(map);
+      expect(fromMap.imagesBase64.length, 3);
+      expect(fromMap.imagesBase64, ['img1_data', 'img2_data', 'img3_data']);
+      expect(fromMap.imageBase64, 'img1_data');
+
+      // Test backward compatibility when reading legacy map with only imageBase64
+      final legacyMap = {
+        'id': 'legacy-1',
+        'text': 'Legacy question',
+        'type': 'multipleChoice',
+        'options': ['A', 'B'],
+        'correctAnswers': [0],
+        'timeLimitSeconds': 20,
+        'basePoints': 1000,
+        'imageBase64': 'legacy_image_data',
+      };
+      final fromLegacy = QuizQuestion.fromMap(legacyMap);
+      expect(fromLegacy.imagesBase64.length, 1);
+      expect(fromLegacy.imagesBase64.first, 'legacy_image_data');
+      expect(fromLegacy.imageBase64, 'legacy_image_data');
+    });
+
     test('Duplication generates new UUID and clones attributes', () {
       final original = QuizQuestion(
         id: 'orig-1',

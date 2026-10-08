@@ -68,20 +68,23 @@ class ActiveQuestion {
   final List<String> options;
   final int timeLimitSeconds;
   final int basePoints;
-  final String? imageBase64;
+  final List<String> imagesBase64;
   final String? explanation;
   final List<int> correctAnswers; // Empty during questionActive (anti-cheat), populated during answerReveal
 
-  const ActiveQuestion({
+  String? get imageBase64 => imagesBase64.isNotEmpty ? imagesBase64.first : null;
+
+  ActiveQuestion({
     required this.text,
     required this.type,
     required this.options,
     required this.timeLimitSeconds,
     required this.basePoints,
-    this.imageBase64,
+    List<String>? imagesBase64,
+    String? imageBase64,
     this.explanation,
     this.correctAnswers = const [],
-  });
+  }) : imagesBase64 = imagesBase64 ?? (imageBase64 != null ? [imageBase64] : const []);
 
   Map<String, dynamic> toMap() {
     return {
@@ -90,6 +93,7 @@ class ActiveQuestion {
       'options': options,
       'timeLimitSeconds': timeLimitSeconds,
       'basePoints': basePoints,
+      'imagesBase64': imagesBase64,
       if (imageBase64 != null) 'imageBase64': imageBase64,
       if (explanation != null) 'explanation': explanation,
       'correctAnswers': correctAnswers,
@@ -97,6 +101,16 @@ class ActiveQuestion {
   }
 
   factory ActiveQuestion.fromMap(Map<String, dynamic> map) {
+    final rawImages = map['imagesBase64'] as List<dynamic>?;
+    final List<String> parsedImages;
+    if (rawImages != null) {
+      parsedImages = rawImages.map((e) => e.toString()).toList();
+    } else if (map['imageBase64'] != null) {
+      parsedImages = [map['imageBase64'] as String];
+    } else {
+      parsedImages = const [];
+    }
+
     return ActiveQuestion(
       text: map['text'] as String? ?? '',
       type: QuestionType.fromString(map['type'] as String?),
@@ -106,7 +120,7 @@ class ActiveQuestion {
           [],
       timeLimitSeconds: (map['timeLimitSeconds'] as num?)?.toInt() ?? 20,
       basePoints: (map['basePoints'] as num?)?.toInt() ?? 1000,
-      imageBase64: map['imageBase64'] as String?,
+      imagesBase64: parsedImages,
       explanation: map['explanation'] as String?,
       correctAnswers: (map['correctAnswers'] as List<dynamic>?)
               ?.map((e) => (e as num).toInt())

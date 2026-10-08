@@ -274,7 +274,7 @@ class FirestoreContestRepository implements ContestRepository {
       options: firstQuestion.options,
       timeLimitSeconds: firstQuestion.timeLimitSeconds,
       basePoints: firstQuestion.basePoints,
-      imageBase64: firstQuestion.imageBase64,
+      imagesBase64: firstQuestion.imagesBase64,
       explanation: null,
       correctAnswers: const [], // anti-cheat: empty during question
     );
@@ -435,7 +435,7 @@ class FirestoreContestRepository implements ContestRepository {
       options: nextQuestion.options,
       timeLimitSeconds: nextQuestion.timeLimitSeconds,
       basePoints: nextQuestion.basePoints,
-      imageBase64: nextQuestion.imageBase64,
+      imagesBase64: nextQuestion.imagesBase64,
       explanation: null,
       correctAnswers: const [], // anti-cheat: empty during question
     );

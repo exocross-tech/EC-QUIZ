@@ -11,13 +11,13 @@ void main() {
       final now = DateTime.now();
       final openedAt = now.add(const Duration(seconds: 1));
 
-      const activeQ = ActiveQuestion(
+      final activeQ = ActiveQuestion(
         text: 'What is the capital of France?',
         type: QuestionType.multipleChoice,
-        options: ['Berlin', 'Madrid', 'Paris', 'Rome'],
+        options: const ['Berlin', 'Madrid', 'Paris', 'Rome'],
         timeLimitSeconds: 20,
         basePoints: 1000,
-        correctAnswers: [], // anti-cheat: empty during active question
+        correctAnswers: const [], // anti-cheat: empty during active question
       );
 
       final contest = Contest(
@@ -56,13 +56,13 @@ void main() {
     });
 
     test('Anti-Cheat: active question has empty correctAnswers during questionActive, populated in answerReveal', () {
-      const activeQ = ActiveQuestion(
+      final activeQ = ActiveQuestion(
         text: 'True or False: Flutter is built by Google.',
         type: QuestionType.trueFalse,
-        options: ['True', 'False'],
+        options: const ['True', 'False'],
         timeLimitSeconds: 15,
         basePoints: 1000,
-        correctAnswers: [],
+        correctAnswers: const [],
       );
 
       expect(activeQ.correctAnswers, isEmpty);

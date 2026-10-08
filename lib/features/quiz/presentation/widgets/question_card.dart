@@ -46,8 +46,9 @@ class QuestionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final hasImage = question.imageBase64 != null;
-    final imageBytes = hasImage ? ImageUtils.base64ToBytes(question.imageBase64) : null;
+    final hasImage = question.imagesBase64.isNotEmpty;
+    final imageBytes = hasImage ? ImageUtils.base64ToBytes(question.imagesBase64.first) : null;
+    final imageCount = question.imagesBase64.length;
     final isValid = question.isValidForPublish;
 
     return Card(
@@ -222,7 +223,35 @@ class QuestionCard extends StatelessWidget {
                           width: 60,
                           height: 60,
                           fit: BoxFit.cover,
+                          gaplessPlayback: true,
                         ),
+                        if (imageCount > 1)
+                          Positioned(
+                            top: 2,
+                            left: 2,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.75),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.photo_library, size: 9, color: Colors.white),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    '$imageCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         Positioned(
                           bottom: 2,
                           right: 2,
