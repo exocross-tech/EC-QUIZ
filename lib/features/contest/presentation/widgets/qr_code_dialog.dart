@@ -236,8 +236,10 @@ class QrCodeDialog extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Copy Action Buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 OutlinedButton.icon(
                   onPressed: () {
@@ -253,8 +255,7 @@ class QrCodeDialog extends StatelessWidget {
                   icon: const Icon(Icons.copy, size: 18),
                   label: const Text('Copy Code'),
                 ),
-                if (isUrl) ...[
-                  const SizedBox(width: 8),
+                if (isUrl)
                   OutlinedButton.icon(
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: qrData));
@@ -269,7 +270,6 @@ class QrCodeDialog extends StatelessWidget {
                     icon: const Icon(Icons.link, size: 18),
                     label: const Text('Copy Link'),
                   ),
-                ],
               ],
             ),
           ],

@@ -27,7 +27,9 @@ class _JoinContestScreenState extends ConsumerState<JoinContestScreen> {
       _codeController.text = widget.initialCode!.trim().toUpperCase();
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(joinContestControllerProvider.notifier).reset();
+      if (mounted) {
+        ref.read(joinContestControllerProvider.notifier).reset();
+      }
     });
   }
 
