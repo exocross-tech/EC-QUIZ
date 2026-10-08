@@ -154,6 +154,7 @@ class Contest {
   final Map<String, int> answerDistribution;
   final int answersSubmittedCount;
   final bool isPaused;
+  final String? endedReason;
 
   const Contest({
     required this.id,
@@ -179,6 +180,7 @@ class Contest {
     this.answerDistribution = const {},
     this.answersSubmittedCount = 0,
     this.isPaused = false,
+    this.endedReason,
   });
 
   bool get hasPin => pin != null && pin!.trim().isNotEmpty;
@@ -219,6 +221,7 @@ class Contest {
     Map<String, int>? answerDistribution,
     int? answersSubmittedCount,
     bool? isPaused,
+    String? endedReason,
   }) {
     return Contest(
       id: id ?? this.id,
@@ -244,6 +247,7 @@ class Contest {
       answerDistribution: answerDistribution ?? this.answerDistribution,
       answersSubmittedCount: answersSubmittedCount ?? this.answersSubmittedCount,
       isPaused: isPaused ?? this.isPaused,
+      endedReason: endedReason ?? this.endedReason,
     );
   }
 
@@ -272,6 +276,7 @@ class Contest {
       'answerDistribution': answerDistribution,
       'answersSubmittedCount': answersSubmittedCount,
       'isPaused': isPaused,
+      'endedReason': endedReason,
     };
   }
 
@@ -320,6 +325,7 @@ class Contest {
       answerDistribution: distMap,
       answersSubmittedCount: (map['answersSubmittedCount'] as num?)?.toInt() ?? 0,
       isPaused: map['isPaused'] as bool? ?? false,
+      endedReason: map['endedReason'] as String?,
     );
   }
 }

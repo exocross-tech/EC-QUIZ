@@ -45,6 +45,7 @@ void main() {
         kickedUserIds: const ['kicked-user-1'],
         participantCount: 5,
         createdAt: now,
+        endedReason: 'host_left',
       );
 
       expect(contest.hasPin, isTrue);
@@ -57,6 +58,7 @@ void main() {
       expect(map['status'], 'lobby');
       expect(map['maxParticipants'], 15);
       expect(map['kickedUserIds'], ['kicked-user-1']);
+      expect(map['endedReason'], 'host_left');
 
       final reconstructed = Contest.fromMap(map, 'contest-999');
       expect(reconstructed.id, contest.id);
@@ -70,6 +72,7 @@ void main() {
       expect(reconstructed.status, ContestStatus.lobby);
       expect(reconstructed.kickedUserIds, ['kicked-user-1']);
       expect(reconstructed.participantCount, 5);
+      expect(reconstructed.endedReason, 'host_left');
     });
 
     test('isJoinable enforces lobby status and participant capacity', () {

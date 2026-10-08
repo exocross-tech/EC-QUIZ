@@ -75,7 +75,7 @@ class HostContestController extends Notifier<AsyncValue<Contest?>> {
   Future<bool> cancelContest(String contestId) async {
     try {
       final repo = ref.read(contestRepositoryProvider);
-      await repo.endContest(contestId);
+      await repo.endContest(contestId, endedReason: 'host_left');
       return true;
     } catch (e, st) {
       state = AsyncValue.error(e, st);

@@ -40,20 +40,38 @@ final routerProvider = Provider<GoRouter>((ref) {
       final guestUser = ref.read(guestUserProvider);
 
       final isLoading = authState.isLoading;
-      final isAuthenticated = (authState.asData?.value != null) || (guestUser != null);
+      final firebaseUser = authState.asData?.value;
+      final isAnonymousUser =
+          (firebaseUser != null && firebaseUser.isAnonymous) || (guestUser != null);
+      final isRegisteredUser = firebaseUser != null && !firebaseUser.isAnonymous;
       final isAuthRoute =
           state.matchedLocation == '/login' || state.matchedLocation == '/register';
-      final isGuestAllowedRoute =
+      final isContestRoute =
           state.matchedLocation.startsWith('/contests/join') ||
           state.matchedLocation.startsWith('/contests/play');
 
       if (isLoading) return null;
 
-      if (!isAuthenticated && !isAuthRoute && !isGuestAllowedRoute) {
-        return '/login';
+      // 1. Anonymous Quick-Play User:
+      // STRICTLY restricted to /contests/join and /contests/play/:contestId.
+      // NEVER allowed on /home, /profile, /quizzes, etc.
+      if (isAnonymousUser && !isRegisteredUser) {
+        if (!isContestRoute) {
+          return '/login';
+        }
+        return null;
       }
 
-      if (isAuthenticated && isAuthRoute) {
+      // 2. Unauthenticated User (not logged in at all):
+      if (!isRegisteredUser) {
+        if (!isAuthRoute && !isContestRoute) {
+          return '/login';
+        }
+        return null;
+      }
+
+      // 3. Registered User:
+      if (isRegisteredUser && isAuthRoute) {
         return '/home';
       }
 

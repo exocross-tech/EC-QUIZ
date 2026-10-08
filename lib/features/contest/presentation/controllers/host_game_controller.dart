@@ -237,9 +237,9 @@ class HostGameController extends Notifier<HostGameState> {
   }
 
   /// Host ends contest
-  Future<bool> endContest(String contestId) async {
+  Future<bool> endContest(String contestId, {String? endedReason}) async {
     try {
-      await ref.read(contestRepositoryProvider).endContest(contestId);
+      await ref.read(contestRepositoryProvider).endContest(contestId, endedReason: endedReason);
       return true;
     } catch (e) {
       state = state.copyWith(errorMessage: e.toString());

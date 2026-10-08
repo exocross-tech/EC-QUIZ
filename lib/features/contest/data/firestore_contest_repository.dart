@@ -236,10 +236,15 @@ class FirestoreContestRepository implements ContestRepository {
   Future<void> updateContestStatus({
     required String contestId,
     required ContestStatus status,
+    String? endedReason,
   }) async {
     final Map<String, dynamic> updateData = {
       'status': status.toDbValue,
     };
+
+    if (endedReason != null) {
+      updateData['endedReason'] = endedReason;
+    }
 
     if (status == ContestStatus.inProgress) {
       updateData['startedAt'] = FieldValue.serverTimestamp();
@@ -254,10 +259,11 @@ class FirestoreContestRepository implements ContestRepository {
   }
 
   @override
-  Future<void> endContest(String contestId) async {
+  Future<void> endContest(String contestId, {String? endedReason}) async {
     await updateContestStatus(
       contestId: contestId,
       status: ContestStatus.ended,
+      endedReason: endedReason,
     );
   }
 

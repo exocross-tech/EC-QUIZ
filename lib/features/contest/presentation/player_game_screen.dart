@@ -84,6 +84,7 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final user = ref.watch(effectiveUserProvider);
     final contestAsync = ref.watch(contestStreamProvider(widget.contestId));
     final participantsAsync = ref.watch(participantsStreamProvider(widget.contestId));
@@ -110,19 +111,45 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
         error: (e, _) => Center(child: Text('Error loading contest: $e')),
         data: (contest) {
           if (contest == null || (contest.status == ContestStatus.ended && contest.stage != ContestStage.podium)) {
+            final isAnonymous =
+                user?.isAnonymous == true || (user?.uid.startsWith('guest_') ?? false);
+            final hostQuit = contest?.endedReason == 'host_left';
+
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.info_outline, size: 56, color: Colors.grey),
-                    const SizedBox(height: 12),
-                    const Text('Contest has ended.', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Icon(
+                      hostQuit ? Icons.cancel_outlined : Icons.info_outline,
+                      size: 64,
+                      color: AppColors.gameRed,
+                    ),
                     const SizedBox(height: 16),
+                    Text(
+                      hostQuit ? 'The Host Left the Contest' : 'Contest Has Ended',
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      hostQuit
+                          ? 'The host closed or terminated this contest early. You will be returned to the ${isAnonymous ? "sign in" : "home"} screen.'
+                          : 'This contest has concluded.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 24),
                     ElevatedButton(
-                      onPressed: () => context.go('/home'),
-                      child: const Text('Back to Home'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () => _handlePlayerExit(isAnonymous: isAnonymous),
+                      child: Text(isAnonymous ? 'Exit to Sign In' : 'Back to Home'),
                     ),
                   ],
                 ),
@@ -132,6 +159,8 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
 
           // Check if kicked
           if (user != null && contest.kickedUserIds.contains(user.id)) {
+            final isAnonymous =
+                user.isAnonymous || user.uid.startsWith('guest_');
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -140,7 +169,7 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
                     backgroundColor: AppColors.gameRed,
                   ),
                 );
-                context.go('/home');
+                _handlePlayerExit(isAnonymous: isAnonymous);
               }
             });
             return const SizedBox.shrink();
@@ -194,10 +223,12 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
 
             case ContestStage.podium:
             case ContestStage.ended:
+              final isAnonymous =
+                  user?.isAnonymous == true || (user?.uid.startsWith('guest_') ?? false);
               return PodiumView(
                 participants: participants,
                 isHost: false,
-                onFinish: () => context.go('/home'),
+                onFinish: () => _handlePlayerExit(isAnonymous: isAnonymous),
               );
 
             case ContestStage.lobby:
@@ -774,12 +805,43 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
     );
   }
 
+  Future<void> _handlePlayerExit({required bool isAnonymous}) async {
+    final user = ref.read(effectiveUserProvider);
+    if (user != null) {
+      try {
+        await ref.read(contestRepositoryProvider).leaveContest(
+          contestId: widget.contestId,
+          participantId: user.id,
+        );
+      } catch (_) {}
+    }
+
+    if (isAnonymous) {
+      await ref.read(authControllerProvider.notifier).signOut();
+      if (mounted) {
+        context.go('/login');
+      }
+    } else {
+      if (mounted) {
+        context.go('/home');
+      }
+    }
+  }
+
   Future<void> _confirmLeave(BuildContext context) async {
+    final user = ref.read(effectiveUserProvider);
+    final isAnonymous =
+        user?.isAnonymous == true || (user?.uid.startsWith('guest_') ?? false);
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Leave Contest?'),
-        content: const Text('Are you sure you want to exit the contest?'),
+        content: Text(
+          isAnonymous
+              ? 'Are you sure you want to exit the contest? Your temporary guest session will end and you will return to the sign in screen.'
+              : 'Are you sure you want to exit the contest?',
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Stay')),
           ElevatedButton(
@@ -791,8 +853,8 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
-      context.go('/home');
+    if (confirmed == true && mounted) {
+      await _handlePlayerExit(isAnonymous: isAnonymous);
     }
   }
 }

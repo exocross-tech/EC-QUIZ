@@ -46,10 +46,11 @@ abstract class ContestRepository {
   Future<void> updateContestStatus({
     required String contestId,
     required ContestStatus status,
+    String? endedReason,
   });
 
   /// Marks a contest as ended and deactivates its join code
-  Future<void> endContest(String contestId);
+  Future<void> endContest(String contestId, {String? endedReason});
 
   // --- LIVE GAMEPLAY (PHASE 4) ---
 

@@ -60,6 +60,8 @@ class _PlayerLobbyScreenState extends ConsumerState<PlayerLobbyScreen> {
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (contest) {
           if (contest == null || contest.status == ContestStatus.ended) {
+            final isAnonymous =
+                user?.isAnonymous == true || (user?.uid.startsWith('guest_') ?? false);
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
@@ -75,8 +77,8 @@ class _PlayerLobbyScreenState extends ConsumerState<PlayerLobbyScreen> {
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: () => context.go('/home'),
-                      child: const Text('Back to Home'),
+                      onPressed: () => _handlePlayerExit(isAnonymous: isAnonymous),
+                      child: Text(isAnonymous ? 'Exit to Sign In' : 'Back to Home'),
                     ),
                   ],
                 ),
@@ -86,6 +88,8 @@ class _PlayerLobbyScreenState extends ConsumerState<PlayerLobbyScreen> {
 
           // Check if kicked
           if (user != null && contest.kickedUserIds.contains(user.id)) {
+            final isAnonymous =
+                user.isAnonymous || user.uid.startsWith('guest_');
             if (!_hasHandledKick) {
               _hasHandledKick = true;
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -97,7 +101,7 @@ class _PlayerLobbyScreenState extends ConsumerState<PlayerLobbyScreen> {
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
-                  context.go('/home');
+                  _handlePlayerExit(isAnonymous: isAnonymous);
                 }
               });
             }
@@ -291,12 +295,37 @@ class _PlayerLobbyScreenState extends ConsumerState<PlayerLobbyScreen> {
     );
   }
 
+  Future<void> _handlePlayerExit({required bool isAnonymous}) async {
+    try {
+      await ref.read(joinContestControllerProvider.notifier).leaveLobby(widget.contestId);
+    } catch (_) {}
+
+    if (isAnonymous) {
+      await ref.read(authControllerProvider.notifier).signOut();
+      if (mounted) {
+        context.go('/login');
+      }
+    } else {
+      if (mounted) {
+        context.go('/home');
+      }
+    }
+  }
+
   Future<void> _confirmLeave() async {
+    final user = ref.read(effectiveUserProvider);
+    final isAnonymous =
+        user?.isAnonymous == true || (user?.uid.startsWith('guest_') ?? false);
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Leave Contest?'),
-        content: const Text('Are you sure you want to leave this game lobby?'),
+        content: Text(
+          isAnonymous
+              ? 'Are you sure you want to leave this game lobby? Your temporary guest session will end and you will return to sign in.'
+              : 'Are you sure you want to leave this game lobby?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -312,10 +341,7 @@ class _PlayerLobbyScreenState extends ConsumerState<PlayerLobbyScreen> {
     );
 
     if (confirmed == true && mounted) {
-      await ref.read(joinContestControllerProvider.notifier).leaveLobby(widget.contestId);
-      if (mounted) {
-        context.go('/home');
-      }
+      await _handlePlayerExit(isAnonymous: isAnonymous);
     }
   }
 }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:quizapp/core/constants/app_colors.dart';
 import 'package:quizapp/features/contest/data/firestore_contest_repository.dart';
 import 'package:quizapp/features/contest/domain/contest.dart';
+import 'package:quizapp/features/contest/domain/contest_participant.dart';
 import 'package:quizapp/features/contest/presentation/controllers/host_game_controller.dart';
 import 'package:quizapp/features/contest/presentation/widgets/answer_distribution_chart.dart';
 import 'package:quizapp/features/contest/presentation/widgets/leaderboard_view.dart';
@@ -79,6 +80,37 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
 
     final contest = contestAsync.asData?.value;
     final isPodium = contest?.stage == ContestStage.podium;
+
+    // Real-time departure detection: notify host if a player leaves during the game
+    ref.listen<AsyncValue<List<ContestParticipant>>>(
+      participantsStreamProvider(widget.contestId),
+      (previous, next) {
+        final prevList = previous?.asData?.value;
+        final nextList = next.asData?.value;
+        if (prevList != null && nextList != null) {
+          final nextIds = nextList.map((p) => p.id).toSet();
+          final currentContest = ref.read(contestStreamProvider(widget.contestId)).asData?.value;
+          for (final p in prevList) {
+            if (!nextIds.contains(p.id) && (currentContest?.kickedUserIds.contains(p.id) != true)) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.person_remove_outlined, color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      Text('${p.displayName} left the contest.'),
+                    ],
+                  ),
+                  backgroundColor: Colors.black87,
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            }
+          }
+        }
+      },
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -160,7 +192,7 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
                 participants: participants,
                 isHost: true,
                 onFinish: () async {
-                  await hostGameController.endContest(contest.id);
+                  await hostGameController.endContest(contest.id, endedReason: 'completed');
                   if (context.mounted) context.go('/home');
                 },
               );
@@ -645,7 +677,7 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
     );
 
     if (confirmed == true && context.mounted) {
-      await ref.read(hostGameControllerProvider.notifier).endContest(widget.contestId);
+      await ref.read(hostGameControllerProvider.notifier).endContest(widget.contestId, endedReason: 'host_left');
       if (context.mounted) context.go('/home');
     }
   }

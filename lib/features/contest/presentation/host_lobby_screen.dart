@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../data/firestore_contest_repository.dart';
 import '../domain/contest.dart';
+import '../domain/contest_participant.dart';
 import 'controllers/host_game_controller.dart';
 import 'host_contest_controller.dart';
 import 'host_game_screen.dart';
@@ -33,6 +34,37 @@ class HostLobbyScreen extends ConsumerWidget {
             contest.stage == ContestStage.podium)) {
       return HostGameScreen(contestId: contestId);
     }
+
+    // Real-time departure detection: notify host if a player leaves the lobby
+    ref.listen<AsyncValue<List<ContestParticipant>>>(
+      participantsStreamProvider(contestId),
+      (previous, next) {
+        final prevList = previous?.asData?.value;
+        final nextList = next.asData?.value;
+        if (prevList != null && nextList != null) {
+          final nextIds = nextList.map((p) => p.id).toSet();
+          final currentContest = ref.read(contestStreamProvider(contestId)).asData?.value;
+          for (final p in prevList) {
+            if (!nextIds.contains(p.id) && (currentContest?.kickedUserIds.contains(p.id) != true)) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.person_remove_outlined, color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      Text('${p.displayName} left the contest.'),
+                    ],
+                  ),
+                  backgroundColor: Colors.black87,
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            }
+          }
+        }
+      },
+    );
 
     return Scaffold(
       appBar: AppBar(

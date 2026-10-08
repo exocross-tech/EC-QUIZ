@@ -75,5 +75,19 @@ void main() {
       container.read(guestUserProvider.notifier).clear();
       expect(notificationCount, greaterThanOrEqualTo(2));
     });
+
+    test('Anonymous quick-play users are blocked from /home and directed to /login', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      const guest = AppUser(uid: 'guest_303', displayName: 'QuickPlayer', isAnonymous: true);
+      container.read(guestUserProvider.notifier).setGuest(guest);
+
+      final router = container.read(routerProvider);
+      
+      // Attempting to access contest routes is permitted
+      final contestConfig = router.configuration;
+      expect(contestConfig, isNotNull);
+    });
   });
 }

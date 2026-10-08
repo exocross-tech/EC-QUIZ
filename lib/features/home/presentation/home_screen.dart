@@ -50,10 +50,38 @@ class HomeScreen extends ConsumerWidget {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
-          IconButton(
-            tooltip: 'View Profile',
-            icon: const Icon(Icons.person),
-            onPressed: () => context.push('/profile'),
+          profileAsync.maybeWhen(
+            data: (profile) {
+              if (profile != null) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(24),
+                    onTap: () => context.push('/profile'),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: AvatarDisplay(
+                        avatarType: profile.avatarType,
+                        avatarPresetId: profile.avatarPresetId,
+                        avatarColor: profile.avatarColor,
+                        avatarBase64: profile.avatarBase64,
+                        radius: 17,
+                      ),
+                    ),
+                  ),
+                );
+              }
+              return IconButton(
+                tooltip: 'View Profile',
+                icon: const Icon(Icons.person),
+                onPressed: () => context.push('/profile'),
+              );
+            },
+            orElse: () => IconButton(
+              tooltip: 'View Profile',
+              icon: const Icon(Icons.person),
+              onPressed: () => context.push('/profile'),
+            ),
           ),
         ],
       ),
