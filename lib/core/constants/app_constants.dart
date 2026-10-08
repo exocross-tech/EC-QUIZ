@@ -12,6 +12,7 @@ class AvatarPreset {
 
 class AppConstants {
   static const String appName = 'Quiz Clash';
+  static const String webHostingUrl = 'https://quiz-game-app-3c75d.web.app';
 
   // Base64 & Firestore document limits
   // Spark plan Firestore: document max size is 1 MiB (1,048,576 bytes).

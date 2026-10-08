@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
+import '../../auth/domain/app_user.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../data/firestore_contest_repository.dart';
 import '../domain/contest.dart';
@@ -107,21 +109,33 @@ class JoinContestController extends Notifier<JoinContestState> {
     String? nickname,
   }) async {
     try {
-      var user = ref.read(authStateProvider).asData?.value;
+      final cleanNickname = nickname?.trim();
+
+      var user = ref.read(effectiveUserProvider);
       if (user == null) {
-        // Seamless instant guest login with Firebase Anonymous Auth
-        final authRepo = ref.read(authRepositoryProvider);
-        user = await authRepo.signInAnonymously();
+        try {
+          // Seamless instant guest login with Firebase Anonymous Auth
+          final authRepo = ref.read(authRepositoryProvider);
+          user = await authRepo.signInAnonymously();
+        } catch (_) {
+          // If Anonymous Auth is not enabled in Firebase Console, fallback to an isolated in-memory guest user
+          final guestId = 'guest_${DateTime.now().millisecondsSinceEpoch}_${const Uuid().v4().substring(0, 8)}';
+          user = AppUser(
+            uid: guestId,
+            displayName: (cleanNickname != null && cleanNickname.isNotEmpty) ? cleanNickname : 'Player',
+            isAnonymous: true,
+          );
+          ref.read(guestUserProvider.notifier).setGuest(user);
+        }
       }
 
       final profile = ref.read(currentUserProfileProvider).asData?.value;
-      final cleanNickname = nickname?.trim();
       final displayName = (cleanNickname != null && cleanNickname.isNotEmpty)
           ? cleanNickname
           : (profile?.displayName ?? user.displayName ?? 'Player');
 
-      // Update displayName on user if provided
-      if (cleanNickname != null && cleanNickname.isNotEmpty) {
+      // Update displayName on user if provided and using real Firebase Auth
+      if (cleanNickname != null && cleanNickname.isNotEmpty && !user.uid.startsWith('guest_')) {
         try {
           await ref.read(authRepositoryProvider).updateDisplayName(cleanNickname);
         } catch (_) {}
@@ -162,7 +176,7 @@ class JoinContestController extends Notifier<JoinContestState> {
 
   Future<void> leaveLobby(String contestId) async {
     try {
-      final user = ref.read(authStateProvider).asData?.value;
+      final user = ref.read(effectiveUserProvider);
       if (user != null) {
         await ref.read(contestRepositoryProvider).leaveContest(
               contestId: contestId,

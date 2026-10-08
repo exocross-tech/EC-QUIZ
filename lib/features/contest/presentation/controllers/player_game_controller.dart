@@ -79,7 +79,7 @@ class PlayerGameController extends Notifier<PlayerGameState> {
 
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {
-      final user = ref.read(authStateProvider).asData?.value;
+      final user = ref.read(effectiveUserProvider);
       final profile = ref.read(currentUserProfileProvider).asData?.value;
 
       if (user == null) {

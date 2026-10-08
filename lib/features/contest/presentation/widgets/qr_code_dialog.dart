@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/file_saver.dart';
 
 class QrCodeDialog extends StatelessWidget {
@@ -36,10 +37,19 @@ class QrCodeDialog extends StatelessWidget {
   String _buildQrData() {
     try {
       final base = Uri.base;
+      // If deployed on public web domain (not localhost), use current browser origin
       if (base.scheme == 'http' || base.scheme == 'https') {
-        return '${base.origin}/#/contests/join?code=$joinCode';
+        if (base.host != 'localhost' && base.host != '127.0.0.1') {
+          return '${base.origin}/#/contests/join?code=$joinCode';
+        }
       }
     } catch (_) {}
+
+    // When running locally on PC or on native APK, use public Firebase hosting URL so mobile phones can join!
+    if (AppConstants.webHostingUrl.isNotEmpty) {
+      return '${AppConstants.webHostingUrl}/#/contests/join?code=$joinCode';
+    }
+
     return joinCode;
   }
 

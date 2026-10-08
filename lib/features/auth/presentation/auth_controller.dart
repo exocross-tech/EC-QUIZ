@@ -30,6 +30,23 @@ final currentUserProfileProvider = StreamProvider<UserProfile?>((ref) {
   return profileRepo.watchProfile(user.uid);
 });
 
+class GuestUserNotifier extends Notifier<AppUser?> {
+  @override
+  AppUser? build() => null;
+
+  void setGuest(AppUser user) => state = user;
+  void clear() => state = null;
+}
+
+final guestUserProvider =
+    NotifierProvider<GuestUserNotifier, AppUser?>(GuestUserNotifier.new);
+
+final effectiveUserProvider = Provider<AppUser?>((ref) {
+  final firebaseUser = ref.watch(authStateProvider).asData?.value;
+  if (firebaseUser != null) return firebaseUser;
+  return ref.watch(guestUserProvider);
+});
+
 class AuthController extends AsyncNotifier<void> {
   @override
   FutureOr<void> build() {

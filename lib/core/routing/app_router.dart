@@ -13,12 +13,13 @@ import '../../features/contest/presentation/player_lobby_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
+  final guestUser = ref.watch(guestUserProvider);
 
   return GoRouter(
     initialLocation: '/home',
     redirect: (context, state) {
       final isLoading = authState.isLoading;
-      final isAuthenticated = authState.asData?.value != null;
+      final isAuthenticated = (authState.asData?.value != null) || (guestUser != null);
       final isAuthRoute =
           state.matchedLocation == '/login' || state.matchedLocation == '/register';
       final isGuestAllowedRoute =

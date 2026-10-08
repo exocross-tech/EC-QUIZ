@@ -85,7 +85,7 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(authStateProvider).asData?.value;
+    final user = ref.watch(effectiveUserProvider);
     final contestAsync = ref.watch(contestStreamProvider(widget.contestId));
     final participantsAsync = ref.watch(participantsStreamProvider(widget.contestId));
     final playerState = ref.watch(playerGameControllerProvider);

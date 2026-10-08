@@ -31,7 +31,7 @@ class _JoinContestScreenState extends ConsumerState<JoinContestScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref.read(joinContestControllerProvider.notifier).reset();
-        final user = ref.read(authStateProvider).asData?.value;
+        final user = ref.read(effectiveUserProvider);
         final profile = ref.read(currentUserProfileProvider).asData?.value;
         final name = profile?.displayName ?? user?.displayName;
         if (name != null && name.isNotEmpty && _nicknameController.text.isEmpty) {
