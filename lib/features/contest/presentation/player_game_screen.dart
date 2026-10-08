@@ -47,9 +47,14 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
 
     if (contest.currentQuestionIndex != _lastHandledQuestionIndex) {
       _lastHandledQuestionIndex = contest.currentQuestionIndex;
-      ref.read(playerGameControllerProvider.notifier).resetForNewQuestion();
-      _textAnswerController.clear();
       _orderingList = null;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(playerGameControllerProvider.notifier).resetForNewQuestion();
+          _textAnswerController.clear();
+        }
+      });
 
       final timeLimit = contest.activeQuestion?.timeLimitSeconds ?? 20;
 
@@ -157,7 +162,9 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
               : const AsyncValue.data(null);
 
           final myAnswer = answerAsync.asData?.value;
-          final hasSubmitted = playerState.hasSubmitted || myAnswer != null;
+          final hasSubmitted = (playerState.hasSubmitted &&
+                  playerState.submittedQuestionIndex == contest.currentQuestionIndex) ||
+              myAnswer != null;
 
           switch (contest.stage) {
             case ContestStage.questionActive:

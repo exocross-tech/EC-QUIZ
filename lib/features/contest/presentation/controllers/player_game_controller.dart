@@ -5,12 +5,14 @@ import 'package:quizapp/features/contest/data/firestore_contest_repository.dart'
 class PlayerGameState {
   final bool isSubmitting;
   final bool hasSubmitted;
+  final int? submittedQuestionIndex;
   final List<dynamic> selectedOptions;
   final String? errorMessage;
 
   const PlayerGameState({
     this.isSubmitting = false,
     this.hasSubmitted = false,
+    this.submittedQuestionIndex,
     this.selectedOptions = const [],
     this.errorMessage,
   });
@@ -18,6 +20,7 @@ class PlayerGameState {
   PlayerGameState copyWith({
     bool? isSubmitting,
     bool? hasSubmitted,
+    int? submittedQuestionIndex,
     List<dynamic>? selectedOptions,
     String? errorMessage,
     bool clearError = false,
@@ -25,6 +28,7 @@ class PlayerGameState {
     return PlayerGameState(
       isSubmitting: isSubmitting ?? this.isSubmitting,
       hasSubmitted: hasSubmitted ?? this.hasSubmitted,
+      submittedQuestionIndex: submittedQuestionIndex ?? this.submittedQuestionIndex,
       selectedOptions: selectedOptions ?? this.selectedOptions,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
@@ -94,6 +98,7 @@ class PlayerGameController extends Notifier<PlayerGameState> {
       state = state.copyWith(
         isSubmitting: false,
         hasSubmitted: true,
+        submittedQuestionIndex: questionIndex,
       );
       return true;
     } catch (e) {
