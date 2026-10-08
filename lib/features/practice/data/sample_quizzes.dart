@@ -9,7 +9,7 @@ class SampleQuizzes {
   static final Quiz generalTrivia = Quiz(
     id: 'sample_general_trivia',
     creatorId: 'system',
-    creatorName: 'Quiz Clash Team',
+    creatorName: 'EC QUIZ Team',
     title: 'General Trivia & Wonders',
     description: 'Test your knowledge across science, astronomy, nature, and history!',
     themeColor: 0xFF6C4AB6,
@@ -89,7 +89,7 @@ class SampleQuizzes {
   static final Quiz scienceNature = Quiz(
     id: 'sample_science_nature',
     creatorId: 'system',
-    creatorName: 'Quiz Clash Team',
+    creatorName: 'EC QUIZ Team',
     title: 'Science & Nature Expedition',
     description: 'Explore the elements, biology, temperature, and planetary distances.',
     themeColor: 0xFF00C897,
@@ -144,7 +144,7 @@ class SampleQuizzes {
   static final Quiz techCoding = Quiz(
     id: 'sample_tech_coding',
     creatorId: 'system',
-    creatorName: 'Quiz Clash Team',
+    creatorName: 'EC QUIZ Team',
     title: 'Tech, Code & Digital Bits',
     description: 'A quick speed-run on web protocols, programming keywords, and data units.',
     themeColor: 0xFF2A85FF,

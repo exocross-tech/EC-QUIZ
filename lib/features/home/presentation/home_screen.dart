@@ -32,7 +32,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       builder: (ctx) => AlertDialog(
         title: Text('$actionTitle Requires Account'),
         content: const Text(
-          'To create custom quizzes, upload questions, and host live game lobbies for other players, please create a free Quiz Clash account or sign in.',
+          'To create custom quizzes, upload questions, and host live game lobbies for other players, please create a free EC QUIZ account or sign in.',
         ),
         actions: [
           TextButton(
@@ -410,7 +410,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Welcome to Quiz Clash,',
+                    'Welcome to EC QUIZ,',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 13,

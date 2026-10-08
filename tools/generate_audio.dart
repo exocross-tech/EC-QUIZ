@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
-/// Generates crisp, synthesized WAV sound effects for Quiz Clash.
+/// Generates crisp, synthesized WAV sound effects for EC QUIZ.
 void main() {
   final audioDir = Directory('assets/audio');
   if (!audioDir.existsSync()) {

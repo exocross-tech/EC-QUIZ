@@ -25,7 +25,7 @@ class ProfileScreen extends ConsumerWidget {
         content: Text(
           isGuest
               ? 'Are you sure you want to exit your guest session? Any temporary nickname will be reset.'
-              : 'Are you sure you want to log out of Quiz Clash?',
+              : 'Are you sure you want to log out of EC QUIZ?',
         ),
         actions: [
           TextButton(
@@ -492,7 +492,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    'You are playing without a permanent Quiz Clash account. Scores in active live games are saved for that contest, but career stats, trophies, and quiz creation require an account.',
+                    'You are playing without a permanent EC QUIZ account. Scores in active live games are saved for that contest, but career stats, trophies, and quiz creation require an account.',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
