@@ -22,6 +22,9 @@ abstract class AuthRepository {
     required String password,
   });
 
+  /// Signs in a user anonymously without requiring credentials.
+  Future<AppUser> signInAnonymously();
+
   /// Sends a password reset email.
   Future<void> sendPasswordResetEmail(String email);
 

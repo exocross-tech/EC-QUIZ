@@ -13,6 +13,7 @@ class FirebaseAuthRepository implements AuthRepository {
       uid: user.uid,
       email: user.email,
       displayName: user.displayName,
+      isAnonymous: user.isAnonymous,
     );
   }
 
@@ -70,6 +71,22 @@ class FirebaseAuthRepository implements AuthRepository {
       throw Exception(_friendlyAuthError(e));
     } catch (e) {
       throw Exception('An unexpected error occurred during sign-up: $e');
+    }
+  }
+
+  @override
+  Future<AppUser> signInAnonymously() async {
+    try {
+      final credential = await _firebaseAuth.signInAnonymously();
+      final user = credential.user;
+      if (user == null) {
+        throw Exception('Guest sign-in failed: No user returned.');
+      }
+      return _mapFirebaseUser(user);
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_friendlyAuthError(e));
+    } catch (e) {
+      throw Exception('An unexpected error occurred during guest login: $e');
     }
   }
 

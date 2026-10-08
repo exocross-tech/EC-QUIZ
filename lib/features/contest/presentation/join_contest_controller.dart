@@ -47,7 +47,7 @@ class JoinContestController extends Notifier<JoinContestState> {
     state = const JoinContestState();
   }
 
-  Future<Contest?> submitCode(String code) async {
+  Future<Contest?> submitCode(String code, {String? nickname}) async {
     final cleanCode = code.trim().toUpperCase();
     if (cleanCode.length != 6) {
       state = state.copyWith(errorMessage: 'Please enter a valid 6-character code.');
@@ -79,7 +79,7 @@ class JoinContestController extends Notifier<JoinContestState> {
       }
 
       // No PIN needed, join directly
-      final joined = await _join(contest: contest, pin: null);
+      final joined = await _join(contest: contest, pin: null, nickname: nickname);
       if (joined) {
         return contest;
       }
@@ -93,26 +93,43 @@ class JoinContestController extends Notifier<JoinContestState> {
     }
   }
 
-  Future<bool> submitPinAndJoin(String pin) async {
+  Future<bool> submitPinAndJoin(String pin, {String? nickname}) async {
     final contest = state.contestFound;
     if (contest == null) return false;
 
     state = state.copyWith(isLoading: true, clearError: true);
-    return _join(contest: contest, pin: pin.trim());
+    return _join(contest: contest, pin: pin.trim(), nickname: nickname);
   }
 
-  Future<bool> _join({required Contest contest, String? pin}) async {
+  Future<bool> _join({
+    required Contest contest,
+    String? pin,
+    String? nickname,
+  }) async {
     try {
-      final user = ref.read(authStateProvider).asData?.value;
-      final profile = ref.read(currentUserProfileProvider).asData?.value;
-
+      var user = ref.read(authStateProvider).asData?.value;
       if (user == null) {
-        throw Exception('Please sign in before joining a contest.');
+        // Seamless instant guest login with Firebase Anonymous Auth
+        final authRepo = ref.read(authRepositoryProvider);
+        user = await authRepo.signInAnonymously();
+      }
+
+      final profile = ref.read(currentUserProfileProvider).asData?.value;
+      final cleanNickname = nickname?.trim();
+      final displayName = (cleanNickname != null && cleanNickname.isNotEmpty)
+          ? cleanNickname
+          : (profile?.displayName ?? user.displayName ?? 'Player');
+
+      // Update displayName on user if provided
+      if (cleanNickname != null && cleanNickname.isNotEmpty) {
+        try {
+          await ref.read(authRepositoryProvider).updateDisplayName(cleanNickname);
+        } catch (_) {}
       }
 
       final participant = ContestParticipant(
         id: user.id,
-        displayName: profile?.displayName ?? user.displayName ?? 'Player',
+        displayName: displayName,
         avatarType: profile?.avatarType ?? 'preset',
         avatarPresetId: profile?.avatarPresetId ?? 'lion',
         avatarColor: profile?.avatarColor ?? '#E21B3C',

@@ -21,10 +21,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isAuthenticated = authState.asData?.value != null;
       final isAuthRoute =
           state.matchedLocation == '/login' || state.matchedLocation == '/register';
+      final isGuestAllowedRoute =
+          state.matchedLocation.startsWith('/contests/join') ||
+          state.matchedLocation.startsWith('/contests/play');
 
       if (isLoading) return null;
 
-      if (!isAuthenticated && !isAuthRoute) {
+      if (!isAuthenticated && !isAuthRoute && !isGuestAllowedRoute) {
         return '/login';
       }
 

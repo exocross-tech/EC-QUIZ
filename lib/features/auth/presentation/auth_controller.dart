@@ -56,6 +56,19 @@ class AuthController extends AsyncNotifier<void> {
     }
   }
 
+  Future<bool> signInAnonymously() async {
+    state = const AsyncValue.loading();
+    try {
+      final authRepo = ref.read(authRepositoryProvider);
+      await authRepo.signInAnonymously();
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    }
+  }
+
   Future<bool> signUp({
     required String email,
     required String password,

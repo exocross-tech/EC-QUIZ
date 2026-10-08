@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../auth/presentation/auth_controller.dart';
 import 'join_contest_controller.dart';
 
 class JoinContestScreen extends ConsumerStatefulWidget {
@@ -19,6 +20,7 @@ class JoinContestScreen extends ConsumerStatefulWidget {
 class _JoinContestScreenState extends ConsumerState<JoinContestScreen> {
   final TextEditingController _codeController = TextEditingController();
   final TextEditingController _pinController = TextEditingController();
+  final TextEditingController _nicknameController = TextEditingController();
 
   @override
   void initState() {
@@ -29,6 +31,12 @@ class _JoinContestScreenState extends ConsumerState<JoinContestScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref.read(joinContestControllerProvider.notifier).reset();
+        final user = ref.read(authStateProvider).asData?.value;
+        final profile = ref.read(currentUserProfileProvider).asData?.value;
+        final name = profile?.displayName ?? user?.displayName;
+        if (name != null && name.isNotEmpty && _nicknameController.text.isEmpty) {
+          _nicknameController.text = name;
+        }
       }
     });
   }
@@ -37,12 +45,14 @@ class _JoinContestScreenState extends ConsumerState<JoinContestScreen> {
   void dispose() {
     _codeController.dispose();
     _pinController.dispose();
+    _nicknameController.dispose();
     super.dispose();
   }
 
   Future<void> _handleJoin() async {
     final controller = ref.read(joinContestControllerProvider.notifier);
     final state = ref.read(joinContestControllerProvider);
+    final nickname = _nicknameController.text.trim();
 
     if (state.needsPin) {
       final pin = _pinController.text.trim();
@@ -55,7 +65,7 @@ class _JoinContestScreenState extends ConsumerState<JoinContestScreen> {
         );
         return;
       }
-      final success = await controller.submitPinAndJoin(pin);
+      final success = await controller.submitPinAndJoin(pin, nickname: nickname);
       if (success && mounted) {
         final contestId = ref.read(joinContestControllerProvider).contestFound?.id;
         if (contestId != null) {
@@ -73,7 +83,7 @@ class _JoinContestScreenState extends ConsumerState<JoinContestScreen> {
         );
         return;
       }
-      final contest = await controller.submitCode(code);
+      final contest = await controller.submitCode(code, nickname: nickname);
       if (contest != null && mounted) {
         final updatedState = ref.read(joinContestControllerProvider);
         if (!updatedState.needsPin && updatedState.isJoined) {
@@ -139,10 +149,10 @@ class _JoinContestScreenState extends ConsumerState<JoinContestScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
 
               // Code Input (or PIN input if needed)
-              if (!state.needsPin)
+              if (!state.needsPin) ...[
                 TextField(
                   controller: _codeController,
                   textCapitalization: TextCapitalization.characters,
@@ -169,8 +179,27 @@ class _JoinContestScreenState extends ConsumerState<JoinContestScreen> {
                     counterText: '',
                   ),
                   onSubmitted: (_) => _handleJoin(),
-                )
-              else
+                ),
+                const SizedBox(height: 14),
+
+                // Player Nickname Input (Instant Guest Play)
+                TextField(
+                  controller: _nicknameController,
+                  textCapitalization: TextCapitalization.words,
+                  textAlign: TextAlign.center,
+                  decoration: InputDecoration(
+                    labelText: 'Your Nickname',
+                    hintText: 'Enter nickname (e.g. Alex)',
+                    prefixIcon: const Icon(Icons.person_outline),
+                    filled: true,
+                    fillColor: theme.colorScheme.surface,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  onSubmitted: (_) => _handleJoin(),
+                ),
+              ] else
                 TextField(
                   controller: _pinController,
                   keyboardType: TextInputType.number,
