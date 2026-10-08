@@ -2,13 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/sound_service.dart';
+import '../../../core/widgets/confetti_overlay.dart';
+import '../../../core/widgets/sound_toggle_button.dart';
 import 'solo_game_controller.dart';
 
-class SoloResultsScreen extends ConsumerWidget {
+class SoloResultsScreen extends ConsumerStatefulWidget {
   const SoloResultsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SoloResultsScreen> createState() => _SoloResultsScreenState();
+}
+
+class _SoloResultsScreenState extends ConsumerState<SoloResultsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(soundServiceProvider).playFanfare();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final state = ref.watch(soloGameControllerProvider);
     final controller = ref.read(soloGameControllerProvider.notifier);
@@ -48,6 +64,7 @@ class SoloResultsScreen extends ConsumerWidget {
         title: const Text('Practice Summary'),
         automaticallyImplyLeading: false,
         actions: [
+          const SoundToggleButton(),
           IconButton(
             tooltip: 'Home',
             icon: const Icon(Icons.home_rounded),
@@ -55,7 +72,10 @@ class SoloResultsScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: ConfettiOverlay(
+        autoPlay: accuracy >= 50,
+        child: SingleChildScrollView(
+
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -265,8 +285,10 @@ class SoloResultsScreen extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   Widget _buildMetricCard(
     ThemeData theme, {

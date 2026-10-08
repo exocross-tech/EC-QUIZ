@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/game_animations.dart';
+import '../../../core/widgets/sound_toggle_button.dart';
 import '../../quiz/data/firestore_quiz_repository.dart';
+
 import '../../quiz/domain/quiz.dart';
 import '../../quiz/domain/quiz_question.dart';
 import '../data/sample_quizzes.dart';
@@ -164,36 +167,14 @@ class _SoloGameScreenState extends ConsumerState<SoloGameScreen> {
           ),
           centerTitle: true,
           actions: [
-            // Streak Flame Pill
-            if (state.streak > 0)
-              Container(
-                margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.deepOrange.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.deepOrange),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.local_fire_department_rounded,
-                      color: Colors.deepOrange,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${state.streak}',
-                      style: const TextStyle(
-                        color: Colors.deepOrange,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            // Sound Toggle
+            const SoundToggleButton(),
+
+            // Animated Streak Flame
+            if (state.streak > 0) ...[
+              AnimatedStreakFlame(streak: state.streak),
+              const SizedBox(width: 8),
+            ],
 
             // Score Pill
             Container(
@@ -233,40 +214,44 @@ class _SoloGameScreenState extends ConsumerState<SoloGameScreen> {
         ),
         body: Column(
           children: [
-            // Timer Bar (active only when answering)
+            // Timer Bar (active only when answering with urgency pulse)
             if (!isRevealed)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                color: theme.colorScheme.surface,
-                child: Row(
-                  children: [
-                    Icon(Icons.timer_outlined, size: 18, color: timerColor),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: LinearProgressIndicator(
-                          value: timerRatio,
-                          minHeight: 10,
-                          backgroundColor: Colors.grey.withValues(alpha: 0.2),
-                          valueColor: AlwaysStoppedAnimation(timerColor),
+              UrgencyPulse(
+                isUrgent: state.remainingSeconds <= 5,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  color: theme.colorScheme.surface,
+                  child: Row(
+                    children: [
+                      Icon(Icons.timer_outlined, size: 18, color: timerColor),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            value: timerRatio,
+                            minHeight: 10,
+                            backgroundColor: Colors.grey.withValues(alpha: 0.2),
+                            valueColor: AlwaysStoppedAnimation(timerColor),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      '${state.remainingSeconds}s',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 14,
-                        color: timerColor,
+                      const SizedBox(width: 10),
+                      Text(
+                        '${state.remainingSeconds}s',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14,
+                          color: timerColor,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
 
             // Main Content Area
+
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -738,25 +723,27 @@ class _SoloGameScreenState extends ConsumerState<SoloGameScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Result Hero Banner
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: isCorrect
-                  ? [AppColors.gameGreen, const Color(0xFF00C897)]
-                  : [AppColors.gameRed, const Color(0xFFFF5252)],
-            ),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: (isCorrect ? AppColors.gameGreen : AppColors.gameRed)
-                    .withValues(alpha: 0.35),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+        // Result Hero Banner with PopIn bounce
+        PopIn(
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isCorrect
+                    ? [AppColors.gameGreen, const Color(0xFF00C897)]
+                    : [AppColors.gameRed, const Color(0xFFFF5252)],
               ),
-            ],
-          ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: (isCorrect ? AppColors.gameGreen : AppColors.gameRed)
+                      .withValues(alpha: 0.35),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+
           child: Column(
             children: [
               Icon(
@@ -797,7 +784,9 @@ class _SoloGameScreenState extends ConsumerState<SoloGameScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 16),
+      ),
+      const SizedBox(height: 16),
+
 
         // Correct Answer Reference Card
         Container(

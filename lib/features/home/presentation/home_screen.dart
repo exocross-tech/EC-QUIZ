@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/widgets/avatar_display.dart';
+import '../../../core/widgets/sound_toggle_button.dart';
 import '../../auth/domain/app_user.dart';
+
 import '../../auth/presentation/auth_controller.dart';
 import '../../contest/presentation/create_contest_dialog.dart';
 
@@ -50,7 +52,9 @@ class HomeScreen extends ConsumerWidget {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
+          const SoundToggleButton(),
           profileAsync.maybeWhen(
+
             data: (profile) {
               if (profile != null) {
                 return Padding(

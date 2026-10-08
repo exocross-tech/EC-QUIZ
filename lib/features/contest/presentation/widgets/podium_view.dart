@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quizapp/core/constants/app_colors.dart';
+import 'package:quizapp/core/services/sound_service.dart';
 import 'package:quizapp/core/widgets/avatar_display.dart';
+import 'package:quizapp/core/widgets/confetti_overlay.dart';
 import 'package:quizapp/features/contest/domain/contest_participant.dart';
 
-class PodiumView extends StatelessWidget {
+class PodiumView extends ConsumerStatefulWidget {
   final List<ContestParticipant> participants;
   final VoidCallback onFinish;
   final bool isHost;
@@ -16,11 +19,24 @@ class PodiumView extends StatelessWidget {
   });
 
   @override
+  ConsumerState<PodiumView> createState() => _PodiumViewState();
+}
+
+class _PodiumViewState extends ConsumerState<PodiumView> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(soundServiceProvider).playFanfare();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     // Sorted descending by total score
-    final sorted = List<ContestParticipant>.from(participants)
+    final sorted = List<ContestParticipant>.from(widget.participants)
       ..sort((a, b) => b.totalScore.compareTo(a.totalScore));
 
     final first = sorted.isNotEmpty ? sorted[0] : null;
@@ -28,7 +44,9 @@ class PodiumView extends StatelessWidget {
     final third = sorted.length > 2 ? sorted[2] : null;
     final rest = sorted.length > 3 ? sorted.sublist(3) : <ContestParticipant>[];
 
-    return SingleChildScrollView(
+    return ConfettiOverlay(
+      child: SingleChildScrollView(
+
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Column(
         children: [
@@ -182,7 +200,7 @@ class PodiumView extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: onFinish,
+              onPressed: widget.onFinish,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -193,15 +211,17 @@ class PodiumView extends StatelessWidget {
               ),
               icon: const Icon(Icons.home_rounded),
               label: Text(
-                isHost ? 'End Contest & Return Home' : 'Back to Home',
+                widget.isHost ? 'End Contest & Return Home' : 'Back to Home',
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   Widget _buildPodiumStep({
     required BuildContext context,

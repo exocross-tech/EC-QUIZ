@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/sound_service.dart';
 import '../../../core/utils/scoring_utils.dart';
+
 import '../../quiz/domain/quiz.dart';
 import '../../quiz/domain/quiz_question.dart';
 import '../domain/practice_models.dart';
@@ -166,7 +168,13 @@ class SoloGameController extends Notifier<SoloGameState> {
     _countdownTimer?.cancel();
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (state.remainingSeconds > 1) {
-        state = state.copyWith(remainingSeconds: state.remainingSeconds - 1);
+        final nextSeconds = state.remainingSeconds - 1;
+        state = state.copyWith(remainingSeconds: nextSeconds);
+        if (nextSeconds <= 5 && nextSeconds > 0) {
+          try {
+            ref.read(soundServiceProvider).playTick();
+          } catch (_) {}
+        }
       } else {
         timer.cancel();
         state = state.copyWith(remainingSeconds: 0);
@@ -252,10 +260,22 @@ class SoloGameController extends Notifier<SoloGameState> {
       // Streak bonus: +100 for streak 2, +200 for streak 3, etc.
       final streakBonus = nextStreak > 1 ? (nextStreak - 1) * 100 : 0;
       pointsAwarded = speedPoints + streakBonus;
+
+      try {
+        if (nextStreak > 1) {
+          ref.read(soundServiceProvider).playStreak();
+        } else {
+          ref.read(soundServiceProvider).playCorrect();
+        }
+      } catch (_) {}
     } else {
       nextStreak = 0;
       pointsAwarded = 0;
+      try {
+        ref.read(soundServiceProvider).playIncorrect();
+      } catch (_) {}
     }
+
 
     final answerResult = PracticeAnswer(
       questionIndex: state.currentQuestionIndex,

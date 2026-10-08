@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quizapp/core/constants/app_colors.dart';
+import 'package:quizapp/core/services/sound_service.dart';
+import 'package:quizapp/core/widgets/game_animations.dart';
+import 'package:quizapp/core/widgets/sound_toggle_button.dart';
 import 'package:quizapp/features/auth/presentation/auth_controller.dart';
+
 import 'package:quizapp/features/quiz/domain/quiz_question.dart';
 import 'package:quizapp/features/contest/data/firestore_contest_repository.dart';
 import 'package:quizapp/features/contest/domain/contest.dart';
@@ -74,6 +78,11 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
         setState(() {
           if (_remainingSeconds > 0) {
             _remainingSeconds--;
+            if (_remainingSeconds <= 5 && _remainingSeconds > 0) {
+              try {
+                ref.read(soundServiceProvider).playTick();
+              } catch (_) {}
+            }
           } else {
             timer.cancel();
           }
@@ -99,6 +108,7 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
+          const SoundToggleButton(),
           IconButton(
             icon: const Icon(Icons.exit_to_app),
             tooltip: 'Leave Contest',
@@ -106,6 +116,7 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
           ),
         ],
       ),
+
       body: contestAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error loading contest: $e')),
@@ -342,16 +353,20 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
                     style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
                   ),
                 ),
-                Row(
-                  children: [
-                    Icon(Icons.timer_outlined, size: 18, color: timerColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$_remainingSeconds s',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: timerColor),
-                    ),
-                  ],
+                UrgencyPulse(
+                  isUrgent: _remainingSeconds <= 5 && _remainingSeconds > 0,
+                  child: Row(
+                    children: [
+                      Icon(Icons.timer_outlined, size: 18, color: timerColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$_remainingSeconds s',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: timerColor),
+                      ),
+                    ],
+                  ),
                 ),
+
               ],
             ),
           ),
@@ -693,54 +708,57 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Correctness Hero Banner
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: isCorrect
-                    ? [AppColors.gameGreen, const Color(0xFF00C897)]
-                    : [AppColors.gameRed, const Color(0xFFFF5252)],
+          // Correctness Hero Banner with PopIn bounce
+          PopIn(
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isCorrect
+                      ? [AppColors.gameGreen, const Color(0xFF00C897)]
+                      : [AppColors.gameRed, const Color(0xFFFF5252)],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: (isCorrect ? AppColors.gameGreen : AppColors.gameRed).withValues(alpha: 0.35),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: (isCorrect ? AppColors.gameGreen : AppColors.gameRed).withValues(alpha: 0.35),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Icon(
-                  isCorrect ? Icons.check_circle_rounded : Icons.cancel_rounded,
-                  color: Colors.white,
-                  size: 48,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  isCorrect ? 'CORRECT!' : 'INCORRECT',
-                  style: const TextStyle(
+              child: Column(
+                children: [
+                  Icon(
+                    isCorrect ? Icons.check_circle_rounded : Icons.cancel_rounded,
                     color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
+                    size: 48,
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  isCorrect ? '+$pointsAwarded points' : '+0 points',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(height: 8),
+                  Text(
+                    isCorrect ? 'CORRECT!' : 'INCORRECT',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    isCorrect ? '+$pointsAwarded points' : '+0 points',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 20),
+
 
           // Distribution chart
           if (question != null)
