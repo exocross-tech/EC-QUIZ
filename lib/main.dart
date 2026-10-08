@@ -1,3 +1,5 @@
+import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -9,6 +11,21 @@ import 'core/constants/app_constants.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Guard against known Flutter Web engine viewport assertions on browser resize / keyboard dismiss
+  PlatformDispatcher.instance.onError = (error, stack) {
+    if (error.toString().contains('ViewInsets cannot be negative')) {
+      return true; // handled
+    }
+    return false;
+  };
+
+  FlutterError.onError = (FlutterErrorDetails details) {
+    if (details.exceptionAsString().contains('ViewInsets cannot be negative')) {
+      return;
+    }
+    FlutterError.presentError(details);
+  };
 
   bool firebaseInitialized = false;
   String? initError;

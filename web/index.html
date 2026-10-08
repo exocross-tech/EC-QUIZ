@@ -20,6 +20,8 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -31,6 +33,54 @@
 
   <title>quizapp</title>
   <link rel="manifest" href="manifest.json">
+
+  <script>
+    (function() {
+      // Guard against Flutter Web engine Assertion failed: "_viewInsets.isNonNegative"
+      // ViewInsets cannot be negative when visualViewport exceeds inner dimensions on resize
+      try {
+        if (window.visualViewport) {
+          function patchProp(target, prop, transform) {
+            var desc = Object.getOwnPropertyDescriptor(target, prop);
+            if (desc && desc.get) {
+              Object.defineProperty(target, prop, {
+                get: function() {
+                  return transform(desc.get.call(this));
+                },
+                configurable: true,
+                enumerable: true
+              });
+            }
+          }
+
+          var proto = window.VisualViewport ? window.VisualViewport.prototype : window.visualViewport;
+          patchProp(proto, 'height', function(h) {
+            return Math.min(h, window.innerHeight);
+          });
+          patchProp(proto, 'width', function(w) {
+            return Math.min(w, window.innerWidth);
+          });
+          patchProp(proto, 'offsetTop', function(t) {
+            return Math.max(0, t);
+          });
+          patchProp(proto, 'offsetLeft', function(l) {
+            return Math.max(0, l);
+          });
+        }
+      } catch (e) {
+        console.warn('VisualViewport patch skipped:', e);
+      }
+
+      // Suppress unhandled promise rejection for known Flutter Web engine ViewInsets bug
+      window.addEventListener('unhandledrejection', function(event) {
+        var reason = event.reason;
+        var msg = (reason && (reason.message || reason.toString())) || '';
+        if (msg.indexOf('ViewInsets cannot be negative') !== -1) {
+          event.preventDefault();
+        }
+      });
+    })();
+  </script>
 </head>
 <body>
   <!--
