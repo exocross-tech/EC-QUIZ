@@ -37,14 +37,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     if (!success && mounted) {
       final error = ref.read(authControllerProvider).error;
+      final errorMsg = error?.toString().replaceAll('Exception: ', '') ??
+          'Login failed. Please verify your credentials.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            error?.toString().replaceAll('Exception: ', '') ??
-                'Login failed. Please verify your credentials.',
-          ),
+          content: Text(errorMsg),
           backgroundColor: AppColors.gameRed,
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
+          action: errorMsg.contains('sign up') ||
+                  errorMsg.contains('account') ||
+                  errorMsg.contains('credentials')
+              ? SnackBarAction(
+                  label: 'Sign Up',
+                  textColor: Colors.white,
+                  onPressed: () => context.push('/register'),
+                )
+              : null,
         ),
       );
     }

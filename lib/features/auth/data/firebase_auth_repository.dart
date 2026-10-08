@@ -113,24 +113,27 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   String _friendlyAuthError(FirebaseAuthException e) {
-    switch (e.code) {
+    switch (e.code.toLowerCase()) {
       case 'invalid-email':
         return 'Please enter a valid email address.';
       case 'user-disabled':
         return 'This account has been disabled.';
       case 'user-not-found':
-        return 'No user found with this email.';
+        return 'No account found with this email. Please create an account first.';
       case 'wrong-password':
       case 'invalid-credential':
-        return 'Incorrect email or password. Please try again.';
+      case 'invalid_login_credentials':
+        return 'Incorrect email or password, or this account has not been created yet. Please check your credentials or sign up.';
       case 'email-already-in-use':
-        return 'An account already exists with this email.';
+        return 'An account already exists with this email. Please log in instead.';
       case 'weak-password':
         return 'The password is too weak. Please use at least 6 characters.';
       case 'network-request-failed':
         return 'Network connection error. Check your internet connection.';
       case 'too-many-requests':
         return 'Too many failed attempts. Please try again later.';
+      case 'operation-not-allowed':
+        return 'Email/Password sign-in is disabled in your Firebase project. Please enable Email/Password under Firebase Console -> Authentication -> Sign-in method.';
       default:
         return e.message ?? 'Authentication error occurred (${e.code}).';
     }
