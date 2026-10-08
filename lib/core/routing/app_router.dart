@@ -11,6 +11,8 @@ import '../../features/quiz/presentation/quiz_list_screen.dart';
 import '../../features/contest/presentation/host_lobby_screen.dart';
 import '../../features/contest/presentation/join_contest_screen.dart';
 import '../../features/contest/presentation/player_lobby_screen.dart';
+import '../../features/practice/presentation/practice_quiz_select_screen.dart';
+import '../../features/practice/presentation/solo_game_screen.dart';
 
 /// Bridges Riverpod reactive auth/guest state changes into GoRouter's refresh mechanism
 /// without destroying and re-instantiating the GoRouter instance.
@@ -130,6 +132,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           return PlayerLobbyScreen(contestId: contestId);
         },
       ),
+      GoRoute(
+        path: '/practice',
+        builder: (context, state) => const PracticeQuizSelectScreen(),
+      ),
+      GoRoute(
+        path: '/practice/:quizId',
+        builder: (context, state) {
+          final quizId = state.pathParameters['quizId'] ?? '';
+          return SoloGameScreen(quizId: quizId);
+        },
+      ),
     ],
   );
 });
+

@@ -262,16 +262,10 @@ class HomeScreen extends ConsumerWidget {
                 subtitle: 'Play against time without a live host',
                 icon: Icons.speed,
                 color: AppColors.gameYellow,
-                buttonText: 'Practice (Phase 6)',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Solo Practice mode will be unlocked in Phase 6!'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
+                buttonText: 'Start Practice',
+                onTap: () => context.push('/practice'),
               ),
+
             ],
           ),
         ),

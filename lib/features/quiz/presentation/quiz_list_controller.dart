@@ -10,6 +10,12 @@ final userQuizzesProvider = StreamProvider<List<Quiz>>((ref) {
   return ref.watch(quizRepositoryProvider).watchUserQuizzes(authUser.id);
 });
 
+/// Real-time stream of all publicly published quizzes
+final publishedQuizzesProvider = StreamProvider<List<Quiz>>((ref) {
+  return ref.watch(quizRepositoryProvider).watchPublishedQuizzes();
+});
+
+
 /// Controller for deleting or duplicating quizzes from the list screen
 class QuizListController extends Notifier<AsyncValue<void>> {
   @override
