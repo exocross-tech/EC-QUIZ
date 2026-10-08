@@ -103,13 +103,13 @@ class _CreateContestDialogState extends ConsumerState<CreateContestDialog> {
     final mediaQuery = MediaQuery.of(context);
     final maxHeight = mediaQuery.size.height * 0.90;
 
-    return Container(
-      constraints: BoxConstraints(maxHeight: maxHeight),
-      decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
+    return Material(
+      color: theme.scaffoldBackgroundColor,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: Column(
         children: [
           // Drag handle
           Container(
@@ -263,12 +263,39 @@ class _CreateContestDialogState extends ConsumerState<CreateContestDialog> {
                   const SizedBox(height: 12),
 
                   // 3. Optional PIN
-                  SwitchListTile(
-                    title: const Text('Require PIN for Extra Security', style: TextStyle(fontSize: 14)),
-                    subtitle: const Text('Only players who enter the PIN can join', style: TextStyle(fontSize: 12)),
-                    value: _requirePin,
-                    contentPadding: EdgeInsets.zero,
-                    onChanged: (val) => setState(() => _requirePin = val),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => setState(() => _requirePin = !_requirePin),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Require PIN for Extra Security',
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Only players who enter the PIN can join',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Switch(
+                            value: _requirePin,
+                            onChanged: (val) => setState(() => _requirePin = val),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
 
                   if (_requirePin) ...[
@@ -314,6 +341,7 @@ class _CreateContestDialogState extends ConsumerState<CreateContestDialog> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
