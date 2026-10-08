@@ -494,7 +494,7 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: _imagesBase64.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 10),
+                        separatorBuilder: (_, _) => const SizedBox(width: 10),
                         itemBuilder: (context, index) {
                           final bytes = ImageUtils.base64ToBytes(_imagesBase64[index]);
                           final sizeKb = bytes != null

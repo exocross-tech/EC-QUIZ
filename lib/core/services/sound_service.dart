@@ -14,9 +14,9 @@ class SoundService {
   bool _bgmSuppressed = false;
   bool _isBgmPlaying = false;
 
-  SoundService({AudioPlayer? sfxPlayer, AudioPlayer? bgmPlayer})
-      : _sfxPlayer = sfxPlayer,
-        _bgmPlayer = bgmPlayer {
+  SoundService({AudioPlayer? sfxPlayer, AudioPlayer? bgmPlayer}) {
+    _sfxPlayer = sfxPlayer;
+    _bgmPlayer = bgmPlayer;
     _init();
   }
 

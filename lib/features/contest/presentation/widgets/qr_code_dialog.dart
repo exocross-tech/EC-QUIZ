@@ -59,8 +59,14 @@ class QrCodeDialog extends StatelessWidget {
         data: qrData,
         version: QrVersions.auto,
         gapless: true,
-        color: AppColors.primary,
-        emptyColor: Colors.white,
+        eyeStyle: const QrEyeStyle(
+          eyeShape: QrEyeShape.square,
+          color: AppColors.primary,
+        ),
+        dataModuleStyle: const QrDataModuleStyle(
+          dataModuleShape: QrDataModuleShape.square,
+          color: Colors.black87,
+        ),
       );
       final picData = await painter.toImageData(600, format: ui.ImageByteFormat.png);
       if (picData != null) {

@@ -654,6 +654,7 @@ class _SoloGameScreenState extends ConsumerState<SoloGameScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _localOrderingList!.length,
+              // ignore: deprecated_member_use
               onReorder: (oldIndex, newIndex) {
                 ref.read(soundServiceProvider).playClick();
                 setState(() {
@@ -925,7 +926,7 @@ class _SoloGameScreenState extends ConsumerState<SoloGameScreen> {
       ),
     );
 
-    if (shouldLeave == true && mounted) {
+    if (shouldLeave == true && context.mounted) {
       context.pop();
     }
   }
