@@ -95,7 +95,7 @@ class _FirebaseSetupRequiredScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Firebase Configuration Needed'),
+        title: const Text('Firebase Configuration Needed', overflow: TextOverflow.ellipsis),
       ),
       body: SafeArea(
         child: SingleChildScrollView(

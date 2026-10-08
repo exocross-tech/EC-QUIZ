@@ -80,7 +80,11 @@ class _JoinContestScreenState extends ConsumerState<JoinContestScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Join a Contest', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Join a Contest',
+          style: TextStyle(fontWeight: FontWeight.bold),
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(

@@ -99,6 +99,7 @@ class _QuizListScreenState extends ConsumerState<QuizListScreen>
         title: const Text(
           'Quiz Studio',
           style: TextStyle(fontWeight: FontWeight.w900),
+          overflow: TextOverflow.ellipsis,
         ),
         bottom: TabBar(
           controller: _tabController,

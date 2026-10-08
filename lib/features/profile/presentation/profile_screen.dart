@@ -43,7 +43,7 @@ class ProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Profile & Stats'),
+        title: const Text('My Profile & Stats', overflow: TextOverflow.ellipsis),
         actions: [
           IconButton(
             tooltip: 'Log Out',

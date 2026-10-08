@@ -76,7 +76,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Account'),
+        title: const Text('Create Account', overflow: TextOverflow.ellipsis),
       ),
       body: SafeArea(
         child: SingleChildScrollView(

@@ -17,9 +17,10 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           AppConstants.appName,
-          style: const TextStyle(fontWeight: FontWeight.w900),
+          style: TextStyle(fontWeight: FontWeight.w900),
+          overflow: TextOverflow.ellipsis,
         ),
         actions: [
           IconButton(

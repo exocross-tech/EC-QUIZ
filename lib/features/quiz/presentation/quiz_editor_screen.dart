@@ -147,6 +147,7 @@ class _QuizEditorScreenState extends ConsumerState<QuizEditorScreen> {
           title: Text(
             widget.quizId == null ? 'Create Quiz' : 'Edit Quiz',
             style: const TextStyle(fontWeight: FontWeight.bold),
+            overflow: TextOverflow.ellipsis,
           ),
           actions: [
             // Save as Draft button
