@@ -86,6 +86,7 @@ abstract class ContestRepository {
     required String contestId,
     required int questionIndex,
     required List<int> correctAnswers,
+    List<String>? options,
     String? explanation,
     required Map<String, int> distribution,
     required Map<String, int> participantPoints,

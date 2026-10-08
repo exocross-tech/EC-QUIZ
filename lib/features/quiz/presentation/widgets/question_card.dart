@@ -89,20 +89,34 @@ class QuestionCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
 
-                // Question type badge
+                // Question type badge with distinct color and icon
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest,
+                    color: _getTypeColor(question.type).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    question.type.label,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurfaceVariant,
+                    border: Border.all(
+                      color: _getTypeColor(question.type).withValues(alpha: 0.4),
                     ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _getTypeIcon(question.type),
+                        size: 13,
+                        color: _getTypeColor(question.type),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        question.type.label,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: _getTypeColor(question.type),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
@@ -279,70 +293,8 @@ class QuestionCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // Answer options preview grid / wrap
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: List.generate(question.options.length, (optIdx) {
-                final isCorrect = question.correctAnswers.contains(optIdx);
-                final optColor = _optionColors[optIdx % _optionColors.length];
-                final symbol = _optionSymbols[optIdx % _optionSymbols.length];
-                final optText = question.options[optIdx];
-
-                return Container(
-                  constraints: const BoxConstraints(maxWidth: 160),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isCorrect
-                        ? optColor.withValues(alpha: 0.15)
-                        : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(8),
-                    border: isCorrect
-                        ? Border.all(color: optColor, width: 1.5)
-                        : null,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          color: optColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          symbol,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          optText.isEmpty ? '(Empty)' : optText,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: isCorrect ? FontWeight.bold : FontWeight.normal,
-                            color: isCorrect
-                                ? optColor
-                                : theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                      if (isCorrect) ...[
-                        const SizedBox(width: 4),
-                        Icon(Icons.check_circle, size: 14, color: optColor),
-                      ],
-                    ],
-                  ),
-                );
-              }),
-            ),
+            // Answer options preview based on question type
+            _buildOptionsPreview(theme),
             const SizedBox(height: 12),
 
             // Bottom Badges: Timer & Points & Edit Button
@@ -428,5 +380,285 @@ class QuestionCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  static Color _getTypeColor(QuestionType type) {
+    switch (type) {
+      case QuestionType.multipleChoice:
+        return AppColors.primary;
+      case QuestionType.trueFalse:
+        return const Color(0xFF00897B);
+      case QuestionType.multipleSelect:
+        return const Color(0xFF8E24AA);
+      case QuestionType.shortText:
+        return const Color(0xFFE65100);
+      case QuestionType.numeric:
+        return const Color(0xFF1E88E5);
+      case QuestionType.ordering:
+        return const Color(0xFFD81B60);
+    }
+  }
+
+  static IconData _getTypeIcon(QuestionType type) {
+    switch (type) {
+      case QuestionType.multipleChoice:
+        return Icons.radio_button_checked;
+      case QuestionType.trueFalse:
+        return Icons.thumbs_up_down_outlined;
+      case QuestionType.multipleSelect:
+        return Icons.check_box_outlined;
+      case QuestionType.shortText:
+        return Icons.text_fields;
+      case QuestionType.numeric:
+        return Icons.numbers;
+      case QuestionType.ordering:
+        return Icons.format_list_numbered;
+    }
+  }
+
+  Widget _buildOptionsPreview(ThemeData theme) {
+    switch (question.type) {
+      case QuestionType.multipleChoice:
+        return Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: List.generate(question.options.length, (optIdx) {
+            final isCorrect = question.correctAnswers.contains(optIdx);
+            final optColor = _optionColors[optIdx % _optionColors.length];
+            final symbol = _optionSymbols[optIdx % _optionSymbols.length];
+            final optText = question.options[optIdx];
+
+            return Container(
+              constraints: const BoxConstraints(maxWidth: 160),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: isCorrect
+                    ? optColor.withValues(alpha: 0.15)
+                    : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+                border: isCorrect ? Border.all(color: optColor, width: 1.5) : null,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(color: optColor, shape: BoxShape.circle),
+                    child: Text(
+                      symbol,
+                      style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      optText.isEmpty ? '(Empty)' : optText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: isCorrect ? FontWeight.bold : FontWeight.normal,
+                        color: isCorrect ? optColor : theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  if (isCorrect) ...[
+                    const SizedBox(width: 4),
+                    Icon(Icons.check_circle, size: 14, color: optColor),
+                  ],
+                ],
+              ),
+            );
+          }),
+        );
+
+      case QuestionType.trueFalse:
+        final isTrueCorrect = question.correctAnswers.contains(0);
+        final isFalseCorrect = question.correctAnswers.contains(1);
+        return Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isTrueCorrect
+                    ? AppColors.gameGreen.withValues(alpha: 0.15)
+                    : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+                border: isTrueCorrect ? Border.all(color: AppColors.gameGreen, width: 1.5) : null,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('True', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  if (isTrueCorrect) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.check_circle, size: 14, color: AppColors.gameGreen),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isFalseCorrect
+                    ? AppColors.gameRed.withValues(alpha: 0.15)
+                    : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+                border: isFalseCorrect ? Border.all(color: AppColors.gameRed, width: 1.5) : null,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('False', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  if (isFalseCorrect) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.check_circle, size: 14, color: AppColors.gameRed),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+
+      case QuestionType.multipleSelect:
+        return Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: List.generate(question.options.length, (optIdx) {
+            final isCorrect = question.correctAnswers.contains(optIdx);
+            final optText = question.options[optIdx];
+
+            return Container(
+              constraints: const BoxConstraints(maxWidth: 160),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: isCorrect
+                    ? const Color(0xFF8E24AA).withValues(alpha: 0.15)
+                    : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+                border: isCorrect ? Border.all(color: const Color(0xFF8E24AA), width: 1.5) : null,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isCorrect ? Icons.check_box : Icons.check_box_outline_blank,
+                    size: 14,
+                    color: isCorrect ? const Color(0xFF8E24AA) : Colors.grey,
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      optText.isEmpty ? '(Empty)' : optText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: isCorrect ? FontWeight.bold : FontWeight.normal,
+                        color: isCorrect ? const Color(0xFF8E24AA) : theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        );
+
+      case QuestionType.shortText:
+        final answers = question.options.where((o) => o.isNotEmpty).toList();
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE65100).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE65100).withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.text_fields, size: 15, color: Color(0xFFE65100)),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  answers.isEmpty ? 'No answers defined' : 'Accepted: "${answers.join('", "')}"',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFE65100),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
+      case QuestionType.numeric:
+        final val = question.options.isNotEmpty ? question.options.first : '';
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E88E5).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFF1E88E5).withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.numbers, size: 15, color: Color(0xFF1E88E5)),
+              const SizedBox(width: 6),
+              Text(
+                val.isEmpty ? 'No target value' : 'Target Number: $val',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E88E5),
+                ),
+              ),
+            ],
+          ),
+        );
+
+      case QuestionType.ordering:
+        return Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: List.generate(question.options.length, (optIdx) {
+            final text = question.options[optIdx];
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD81B60).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFFD81B60).withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${optIdx + 1}. ',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFFD81B60)),
+                  ),
+                  Flexible(
+                    child: Text(
+                      text.isEmpty ? '(Item)' : text,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  if (optIdx < question.options.length - 1) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.arrow_forward, size: 11, color: Color(0xFFD81B60)),
+                  ],
+                ],
+              ),
+            );
+          }),
+        );
+    }
   }
 }

@@ -60,20 +60,63 @@ class QuizQuestion {
     String? imageBase64,
   }) : imagesBase64 = imagesBase64 ?? (imageBase64 != null ? [imageBase64] : const []);
 
-  /// Factory to generate a fresh, blank multiple-choice question
-  factory QuizQuestion.empty() {
-    return QuizQuestion(
-      id: const Uuid().v4(),
-      text: '',
-      type: QuestionType.multipleChoice,
-      options: const ['', '', '', ''],
-      correctAnswers: const [0],
-      timeLimitSeconds: 20,
-      basePoints: 1000,
-      explanation: null,
-      imagesBase64: const [],
-    );
+  /// Factory to generate a fresh, blank question for a given QuestionType
+  factory QuizQuestion.emptyForType(QuestionType type) {
+    final id = const Uuid().v4();
+    switch (type) {
+      case QuestionType.multipleChoice:
+        return QuizQuestion(
+          id: id,
+          text: '',
+          type: QuestionType.multipleChoice,
+          options: const ['', '', '', ''],
+          correctAnswers: const [0],
+        );
+      case QuestionType.trueFalse:
+        return QuizQuestion(
+          id: id,
+          text: '',
+          type: QuestionType.trueFalse,
+          options: const ['True', 'False'],
+          correctAnswers: const [0],
+        );
+      case QuestionType.multipleSelect:
+        return QuizQuestion(
+          id: id,
+          text: '',
+          type: QuestionType.multipleSelect,
+          options: const ['', '', '', ''],
+          correctAnswers: const [0, 1],
+        );
+      case QuestionType.shortText:
+        return QuizQuestion(
+          id: id,
+          text: '',
+          type: QuestionType.shortText,
+          options: const [''],
+          correctAnswers: const [0],
+        );
+      case QuestionType.numeric:
+        return QuizQuestion(
+          id: id,
+          text: '',
+          type: QuestionType.numeric,
+          options: const [''],
+          correctAnswers: const [0],
+        );
+      case QuestionType.ordering:
+        return QuizQuestion(
+          id: id,
+          text: '',
+          type: QuestionType.ordering,
+          options: const ['', '', '', ''],
+          correctAnswers: const [0, 1, 2, 3],
+        );
+    }
   }
+
+  /// Factory to generate a fresh, blank multiple-choice question
+  factory QuizQuestion.empty() => QuizQuestion.emptyForType(QuestionType.multipleChoice);
 
   QuizQuestion copyWith({
     String? id,
@@ -127,23 +170,63 @@ class QuizQuestion {
     if (text.trim().isEmpty) {
       return 'Question text cannot be empty.';
     }
-    if (options.length < 2) {
-      return 'Must have at least 2 options.';
+
+    switch (type) {
+      case QuestionType.multipleChoice:
+        if (options.length < 2) return 'Must have at least 2 options.';
+        for (int i = 0; i < options.length; i++) {
+          if (options[i].trim().isEmpty) return 'Option ${i + 1} cannot be empty.';
+        }
+        if (correctAnswers.isEmpty) return 'Must select at least one correct answer.';
+        if (correctAnswers.length > 1) return 'Multiple Choice can only have 1 correct answer.';
+        if (correctAnswers.first < 0 || correctAnswers.first >= options.length) {
+          return 'Invalid correct answer selection.';
+        }
+        return null;
+
+      case QuestionType.trueFalse:
+        if (options.length != 2) return 'True/False question must have 2 options.';
+        for (int i = 0; i < options.length; i++) {
+          if (options[i].trim().isEmpty) return 'Option ${i + 1} cannot be empty.';
+        }
+        if (correctAnswers.length != 1 || correctAnswers.first < 0 || correctAnswers.first > 1) {
+          return 'Select whether True or False is the correct answer.';
+        }
+        return null;
+
+      case QuestionType.multipleSelect:
+        if (options.length < 2) return 'Must have at least 2 options.';
+        for (int i = 0; i < options.length; i++) {
+          if (options[i].trim().isEmpty) return 'Option ${i + 1} cannot be empty.';
+        }
+        if (correctAnswers.isEmpty) return 'Must select at least one correct answer.';
+        for (final ans in correctAnswers) {
+          if (ans < 0 || ans >= options.length) return 'Invalid correct answer selection.';
+        }
+        return null;
+
+      case QuestionType.shortText:
+        if (options.isEmpty || options.every((o) => o.trim().isEmpty)) {
+          return 'Please provide at least one accepted answer.';
+        }
+        return null;
+
+      case QuestionType.numeric:
+        if (options.isEmpty || options.first.trim().isEmpty) {
+          return 'Please provide a valid numeric answer.';
+        }
+        if (num.tryParse(options.first.trim()) == null) {
+          return 'The accepted answer must be a valid number.';
+        }
+        return null;
+
+      case QuestionType.ordering:
+        if (options.length < 3) return 'Ordering questions require at least 3 items.';
+        for (int i = 0; i < options.length; i++) {
+          if (options[i].trim().isEmpty) return 'Item ${i + 1} cannot be empty.';
+        }
+        return null;
     }
-    for (int i = 0; i < options.length; i++) {
-      if (options[i].trim().isEmpty) {
-        return 'Option ${i + 1} cannot be empty.';
-      }
-    }
-    if (correctAnswers.isEmpty) {
-      return 'Must select at least one correct answer.';
-    }
-    for (final answerIndex in correctAnswers) {
-      if (answerIndex < 0 || answerIndex >= options.length) {
-        return 'Invalid correct answer selection.';
-      }
-    }
-    return null;
   }
 
   /// Estimates the serialized size in bytes for Firestore document quota checking

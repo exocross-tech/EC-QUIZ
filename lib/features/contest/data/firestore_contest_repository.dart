@@ -271,7 +271,10 @@ class FirestoreContestRepository implements ContestRepository {
     final activeQ = ActiveQuestion(
       text: firstQuestion.text,
       type: firstQuestion.type,
-      options: firstQuestion.options,
+      options: (firstQuestion.type == QuestionType.shortText ||
+              firstQuestion.type == QuestionType.numeric)
+          ? const []
+          : firstQuestion.options,
       timeLimitSeconds: firstQuestion.timeLimitSeconds,
       basePoints: firstQuestion.basePoints,
       imagesBase64: firstQuestion.imagesBase64,
@@ -362,6 +365,7 @@ class FirestoreContestRepository implements ContestRepository {
     required String contestId,
     required int questionIndex,
     required List<int> correctAnswers,
+    List<String>? options,
     String? explanation,
     required Map<String, int> distribution,
     required Map<String, int> participantPoints,
@@ -408,6 +412,9 @@ class FirestoreContestRepository implements ContestRepository {
       'answerDistribution': distribution,
       'activeQuestion.correctAnswers': correctAnswers,
     };
+    if (options != null) {
+      contestUpdate['activeQuestion.options'] = options;
+    }
     if (explanation != null && explanation.trim().isNotEmpty) {
       contestUpdate['activeQuestion.explanation'] = explanation;
     }
@@ -432,7 +439,10 @@ class FirestoreContestRepository implements ContestRepository {
     final activeQ = ActiveQuestion(
       text: nextQuestion.text,
       type: nextQuestion.type,
-      options: nextQuestion.options,
+      options: (nextQuestion.type == QuestionType.shortText ||
+              nextQuestion.type == QuestionType.numeric)
+          ? const []
+          : nextQuestion.options,
       timeLimitSeconds: nextQuestion.timeLimitSeconds,
       basePoints: nextQuestion.basePoints,
       imagesBase64: nextQuestion.imagesBase64,

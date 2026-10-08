@@ -165,6 +165,7 @@ class HostGameController extends Notifier<HostGameState> {
         contestId: contest.id,
         questionIndex: qIndex,
         correctAnswers: question.correctAnswers,
+        options: question.options,
         explanation: question.explanation,
         distribution: distribution,
         participantPoints: participantPoints,
@@ -267,11 +268,20 @@ class HostGameController extends Notifier<HostGameState> {
             selectedSet.containsAll(correctSet);
 
       case QuestionType.shortText:
-      case QuestionType.numeric:
         final userText = selectedAnswers.first.toString().trim().toLowerCase();
         return question.options.any(
           (opt) => opt.trim().toLowerCase() == userText,
         );
+
+      case QuestionType.numeric:
+        final userRaw = selectedAnswers.first.toString().trim();
+        final userNum = double.tryParse(userRaw);
+        if (userNum == null) return false;
+        return question.options.any((opt) {
+          final targetNum = double.tryParse(opt.trim());
+          if (targetNum == null) return false;
+          return (userNum - targetNum).abs() < 0.0001;
+        });
 
       case QuestionType.ordering:
         final selectedList =

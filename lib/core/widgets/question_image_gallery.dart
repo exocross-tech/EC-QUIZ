@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import '../../core/constants/app_colors.dart';
 import '../../core/utils/image_utils.dart';
 
 /// Anti-flicker, performant multi-image mosaic grid for live quiz questions.

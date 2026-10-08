@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quizapp/core/constants/app_colors.dart';
-import 'package:quizapp/core/utils/image_utils.dart';
 import 'package:quizapp/features/auth/presentation/auth_controller.dart';
 import 'package:quizapp/features/quiz/domain/quiz_question.dart';
 import 'package:quizapp/features/contest/data/firestore_contest_repository.dart';
@@ -568,7 +567,15 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
         );
 
       case QuestionType.ordering:
-        _orderingList ??= List.generate(question.options.length, (i) => i);
+        if (_orderingList == null) {
+          final list = List.generate(question.options.length, (i) => i);
+          _orderingList = list.length > 1 ? list.reversed.toList() : list;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              playerController.setOrdering(_orderingList!);
+            }
+          });
+        }
         return Column(
           children: [
             const Text('Drag items into correct order:', style: TextStyle(fontSize: 12, color: Colors.grey)),
@@ -710,6 +717,7 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
               options: question.options,
               correctAnswers: question.correctAnswers,
               distribution: contest.answerDistribution,
+              questionType: question.type,
             ),
 
           if (question?.explanation != null && question!.explanation!.isNotEmpty) ...[

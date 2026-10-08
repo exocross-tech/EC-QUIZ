@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quizapp/core/constants/app_colors.dart';
-import 'package:quizapp/core/utils/image_utils.dart';
 import 'package:quizapp/features/contest/data/firestore_contest_repository.dart';
 import 'package:quizapp/features/contest/domain/contest.dart';
 import 'package:quizapp/features/contest/presentation/controllers/host_game_controller.dart';
@@ -418,6 +417,7 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
                       options: question.options,
                       correctAnswers: question.correctAnswers,
                       distribution: contest.answerDistribution,
+                      questionType: question.type,
                     ),
 
                   // Explanation card if available

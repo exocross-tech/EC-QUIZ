@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -41,6 +40,7 @@ class QuestionEditorDialog extends StatefulWidget {
 }
 
 class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
+  late QuestionType _selectedType;
   late TextEditingController _textController;
   late TextEditingController _explanationController;
   late List<TextEditingController> _optionControllers;
@@ -75,6 +75,7 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
   @override
   void initState() {
     super.initState();
+    _selectedType = widget.question.type;
     _textController = TextEditingController(text: widget.question.text);
     _explanationController =
         TextEditingController(text: widget.question.explanation ?? '');
@@ -98,6 +99,78 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
       c.dispose();
     }
     super.dispose();
+  }
+
+  void _onTypeChanged(QuestionType newType) {
+    if (_selectedType == newType) return;
+    setState(() {
+      _selectedType = newType;
+      switch (newType) {
+        case QuestionType.multipleChoice:
+          if (_optionControllers.length < 2) {
+            while (_optionControllers.length < 4) {
+              _optionControllers.add(TextEditingController());
+            }
+          }
+          if (_correctAnswers.isEmpty || _correctAnswers.first >= _optionControllers.length) {
+            _correctAnswers = [0];
+          } else {
+            _correctAnswers = [_correctAnswers.first];
+          }
+          break;
+
+        case QuestionType.trueFalse:
+          for (final c in _optionControllers) {
+            c.dispose();
+          }
+          _optionControllers = [
+            TextEditingController(text: 'True'),
+            TextEditingController(text: 'False'),
+          ];
+          _correctAnswers = [0];
+          break;
+
+        case QuestionType.multipleSelect:
+          if (_optionControllers.length < 2) {
+            while (_optionControllers.length < 4) {
+              _optionControllers.add(TextEditingController());
+            }
+          }
+          if (_correctAnswers.isEmpty) {
+            _correctAnswers = [0, 1];
+          }
+          break;
+
+        case QuestionType.shortText:
+          for (final c in _optionControllers) {
+            c.dispose();
+          }
+          _optionControllers = [
+            TextEditingController(),
+          ];
+          _correctAnswers = [0];
+          break;
+
+        case QuestionType.numeric:
+          for (final c in _optionControllers) {
+            c.dispose();
+          }
+          _optionControllers = [
+            TextEditingController(),
+          ];
+          _correctAnswers = [0];
+          break;
+
+        case QuestionType.ordering:
+          if (_optionControllers.length < 3) {
+            while (_optionControllers.length < 4) {
+              _optionControllers.add(TextEditingController());
+            }
+          }
+          _correctAnswers = List.generate(_optionControllers.length, (i) => i);
+          break;
+      }
+    });
   }
 
   Future<void> _pickAndCompressImage(ImageSource source) async {
@@ -157,23 +230,37 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
     if (_optionControllers.length >= 6) return;
     setState(() {
       _optionControllers.add(TextEditingController());
-    });
-  }
-
-  void _removeOption(int index) {
-    if (_optionControllers.length <= 2) return;
-    setState(() {
-      _optionControllers.removeAt(index);
-      _correctAnswers.remove(index);
-      // Shift indices higher than index down by 1
-      _correctAnswers = _correctAnswers.map((a) => a > index ? a - 1 : a).toList();
-      if (_correctAnswers.isEmpty && _optionControllers.isNotEmpty) {
-        _correctAnswers.add(0);
+      if (_selectedType == QuestionType.ordering) {
+        _correctAnswers = List.generate(_optionControllers.length, (i) => i);
       }
     });
   }
 
-  void _toggleCorrectAnswer(int index) {
+  void _removeOption(int index) {
+    final minLimit = _selectedType == QuestionType.ordering ? 3 : 2;
+    if (_optionControllers.length <= minLimit) return;
+    setState(() {
+      final removed = _optionControllers.removeAt(index);
+      removed.dispose();
+      if (_selectedType == QuestionType.ordering) {
+        _correctAnswers = List.generate(_optionControllers.length, (i) => i);
+      } else {
+        _correctAnswers.remove(index);
+        _correctAnswers = _correctAnswers.map((a) => a > index ? a - 1 : a).toList();
+        if (_correctAnswers.isEmpty && _optionControllers.isNotEmpty) {
+          _correctAnswers.add(0);
+        }
+      }
+    });
+  }
+
+  void _setSingleCorrectAnswer(int index) {
+    setState(() {
+      _correctAnswers = [index];
+    });
+  }
+
+  void _toggleMultiCorrectAnswer(int index) {
     setState(() {
       if (_correctAnswers.contains(index)) {
         if (_correctAnswers.length > 1) {
@@ -185,51 +272,66 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
     });
   }
 
+  void _moveOrderingItem(int oldIndex, int newIndex) {
+    if (newIndex < 0 || newIndex >= _optionControllers.length) return;
+    setState(() {
+      final item = _optionControllers.removeAt(oldIndex);
+      _optionControllers.insert(newIndex, item);
+      _correctAnswers = List.generate(_optionControllers.length, (i) => i);
+    });
+  }
+
+  static IconData _getTypeIcon(QuestionType type) {
+    switch (type) {
+      case QuestionType.multipleChoice:
+        return Icons.radio_button_checked;
+      case QuestionType.trueFalse:
+        return Icons.thumbs_up_down_outlined;
+      case QuestionType.multipleSelect:
+        return Icons.check_box_outlined;
+      case QuestionType.shortText:
+        return Icons.text_fields;
+      case QuestionType.numeric:
+        return Icons.numbers;
+      case QuestionType.ordering:
+        return Icons.format_list_numbered;
+    }
+  }
+
   void _handleSave() {
     final text = _textController.text.trim();
     final options = _optionControllers.map((c) => c.text.trim()).toList();
     final explanation = _explanationController.text.trim();
 
-    if (text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter question text.'),
-          backgroundColor: AppColors.gameRed,
-        ),
-      );
-      return;
-    }
-
-    if (options.length < 2 || options.any((o) => o.isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fill out all option answers (at least 2).'),
-          backgroundColor: AppColors.gameRed,
-        ),
-      );
-      return;
-    }
-
-    if (_correctAnswers.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select at least one correct answer.'),
-          backgroundColor: AppColors.gameRed,
-        ),
-      );
-      return;
+    List<int> correctAnswers = List.from(_correctAnswers);
+    if (_selectedType == QuestionType.ordering) {
+      correctAnswers = List.generate(options.length, (i) => i);
+    } else if (_selectedType == QuestionType.shortText || _selectedType == QuestionType.numeric) {
+      correctAnswers = [0];
     }
 
     final updated = widget.question.copyWith(
       text: text,
+      type: _selectedType,
       options: options,
-      correctAnswers: _correctAnswers,
+      correctAnswers: correctAnswers,
       timeLimitSeconds: _timeLimitSeconds,
       basePoints: _basePoints,
       explanation: explanation.isNotEmpty ? explanation : null,
       imagesBase64: _imagesBase64,
       clearImage: _imagesBase64.isEmpty,
     );
+
+    final error = updated.validationError;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: AppColors.gameRed,
+        ),
+      );
+      return;
+    }
 
     widget.onSave(updated);
     Navigator.of(context).pop();
@@ -305,6 +407,41 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Question Type Selector
+                  Text(
+                    'Question Type',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: QuestionType.values.map((type) {
+                        final isSelected = _selectedType == type;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            avatar: Icon(
+                              _getTypeIcon(type),
+                              size: 16,
+                              color: isSelected ? Colors.white : theme.colorScheme.primary,
+                            ),
+                            label: Text(type.label),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              if (selected) {
+                                _onTypeChanged(type);
+                              }
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
                   // 1. Question Text
                   Text(
                     'Question Text',
@@ -558,125 +695,8 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
                   ),
                   const SizedBox(height: 22),
 
-                  // 5. Answer Options with Kahoot styling
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Answers (Tap circle to mark correct)',
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (_optionControllers.length < 6)
-                        TextButton.icon(
-                          onPressed: _addOption,
-                          icon: const Icon(Icons.add, size: 16),
-                          label: const Text('Add Option', style: TextStyle(fontSize: 12)),
-                          style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Options list
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _optionControllers.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, optIdx) {
-                      final isCorrect = _correctAnswers.contains(optIdx);
-                      final optColor = _optionColors[optIdx % _optionColors.length];
-                      final symbol = _optionSymbols[optIdx % _optionSymbols.length];
-
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: isCorrect
-                              ? optColor.withValues(alpha: 0.12)
-                              : theme.colorScheme.surface,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: isCorrect
-                                ? optColor
-                                : theme.colorScheme.outlineVariant,
-                            width: isCorrect ? 2 : 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            // Symbol Icon badge
-                            Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: optColor,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  symbol,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-
-                            // Option text input
-                            Expanded(
-                              child: TextFormField(
-                                controller: _optionControllers[optIdx],
-                                decoration: InputDecoration(
-                                  hintText: 'Answer option ${optIdx + 1}',
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                                ),
-                              ),
-                            ),
-
-                            // Correct Answer toggle button
-                            IconButton(
-                              tooltip: isCorrect ? 'Correct Answer' : 'Mark as Correct',
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.all(4),
-                              constraints: const BoxConstraints(),
-                              icon: Icon(
-                                isCorrect
-                                    ? Icons.check_circle
-                                    : Icons.radio_button_unchecked,
-                                color: isCorrect
-                                    ? optColor
-                                    : Colors.grey,
-                                size: 24,
-                              ),
-                              onPressed: () => _toggleCorrectAnswer(optIdx),
-                            ),
-
-                            // Delete option button (if > 2)
-                            if (_optionControllers.length > 2) ...[
-                              const SizedBox(width: 4),
-                              IconButton(
-                                icon: const Icon(Icons.close, size: 18, color: Colors.grey),
-                                visualDensity: VisualDensity.compact,
-                                padding: const EdgeInsets.all(4),
-                                constraints: const BoxConstraints(),
-                                tooltip: 'Remove Option',
-                                onPressed: () => _removeOption(optIdx),
-                              ),
-                            ],
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                  // 5. Dynamic Answer Options
+                  _buildAnswerOptionsSection(theme),
                   const SizedBox(height: 20),
 
                   // 6. Optional Explanation
@@ -724,6 +744,527 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAnswerOptionsSection(ThemeData theme) {
+    switch (_selectedType) {
+      case QuestionType.multipleChoice:
+        return _buildMultipleChoiceEditor(theme);
+      case QuestionType.trueFalse:
+        return _buildTrueFalseEditor(theme);
+      case QuestionType.multipleSelect:
+        return _buildMultipleSelectEditor(theme);
+      case QuestionType.shortText:
+        return _buildShortTextEditor(theme);
+      case QuestionType.numeric:
+        return _buildNumericEditor(theme);
+      case QuestionType.ordering:
+        return _buildOrderingEditor(theme);
+    }
+  }
+
+  // 1. Multiple Choice Editor
+  Widget _buildMultipleChoiceEditor(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Options (Tap circle to mark single correct)',
+                style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (_optionControllers.length < 6)
+              TextButton.icon(
+                onPressed: _addOption,
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add Option', style: TextStyle(fontSize: 12)),
+                style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _optionControllers.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (context, optIdx) {
+            final isCorrect = _correctAnswers.contains(optIdx);
+            final optColor = _optionColors[optIdx % _optionColors.length];
+            final symbol = _optionSymbols[optIdx % _optionSymbols.length];
+
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: isCorrect ? optColor.withValues(alpha: 0.12) : theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isCorrect ? optColor : theme.colorScheme.outlineVariant,
+                  width: isCorrect ? 2 : 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: optColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        symbol,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _optionControllers[optIdx],
+                      decoration: InputDecoration(
+                        hintText: 'Answer option ${optIdx + 1}',
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: isCorrect ? 'Correct Answer' : 'Mark as Correct',
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.all(4),
+                    constraints: const BoxConstraints(),
+                    icon: Icon(
+                      isCorrect ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                      color: isCorrect ? optColor : Colors.grey,
+                      size: 24,
+                    ),
+                    onPressed: () => _setSingleCorrectAnswer(optIdx),
+                  ),
+                  if (_optionControllers.length > 2) ...[
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Remove Option',
+                      onPressed: () => _removeOption(optIdx),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  // 2. True / False Editor
+  Widget _buildTrueFalseEditor(ThemeData theme) {
+    final isTrueCorrect = _correctAnswers.contains(0);
+    final isFalseCorrect = _correctAnswers.contains(1);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Select the Correct Statement',
+          style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () => _setSingleCorrectAnswer(0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: isTrueCorrect
+                        ? AppColors.gameGreen.withValues(alpha: 0.15)
+                        : theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isTrueCorrect ? AppColors.gameGreen : theme.colorScheme.outlineVariant,
+                      width: isTrueCorrect ? 2.5 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        isTrueCorrect ? Icons.check_circle : Icons.circle_outlined,
+                        color: isTrueCorrect ? AppColors.gameGreen : Colors.grey,
+                        size: 32,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'TRUE',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.gameGreen,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () => _setSingleCorrectAnswer(1),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: isFalseCorrect
+                        ? AppColors.gameRed.withValues(alpha: 0.15)
+                        : theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isFalseCorrect ? AppColors.gameRed : theme.colorScheme.outlineVariant,
+                      width: isFalseCorrect ? 2.5 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        isFalseCorrect ? Icons.cancel : Icons.circle_outlined,
+                        color: isFalseCorrect ? AppColors.gameRed : Colors.grey,
+                        size: 32,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'FALSE',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.gameRed,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // 3. Multiple Select Editor
+  Widget _buildMultipleSelectEditor(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Options (Check all that apply)',
+                style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (_optionControllers.length < 6)
+              TextButton.icon(
+                onPressed: _addOption,
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add Option', style: TextStyle(fontSize: 12)),
+                style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+              ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Players must select all correct answers to earn points.',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        ),
+        const SizedBox(height: 8),
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _optionControllers.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (context, optIdx) {
+            final isCorrect = _correctAnswers.contains(optIdx);
+            final optColor = _optionColors[optIdx % _optionColors.length];
+
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: isCorrect ? optColor.withValues(alpha: 0.12) : theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isCorrect ? optColor : theme.colorScheme.outlineVariant,
+                  width: isCorrect ? 2 : 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: isCorrect,
+                    activeColor: optColor,
+                    onChanged: (_) => _toggleMultiCorrectAnswer(optIdx),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _optionControllers[optIdx],
+                      decoration: InputDecoration(
+                        hintText: 'Answer option ${optIdx + 1}',
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                    ),
+                  ),
+                  if (_optionControllers.length > 2)
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Remove Option',
+                      onPressed: () => _removeOption(optIdx),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  // 4. Short Text Editor
+  Widget _buildShortTextEditor(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Accepted Text Answers',
+                style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (_optionControllers.length < 5)
+              TextButton.icon(
+                onPressed: _addOption,
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add Variation', style: TextStyle(fontSize: 12)),
+                style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+              ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Matching is case-insensitive. Add alternative spellings or synonyms if applicable.',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        ),
+        const SizedBox(height: 10),
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _optionControllers.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (context, optIdx) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: theme.colorScheme.outlineVariant),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_outline, color: AppColors.gameGreen, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _optionControllers[optIdx],
+                      decoration: InputDecoration(
+                        hintText: optIdx == 0 ? 'Primary answer (e.g. Paris)' : 'Variation (e.g. paris)',
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
+                  if (_optionControllers.length > 1)
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Remove Variation',
+                      onPressed: () => _removeOption(optIdx),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  // 5. Numeric Editor
+  Widget _buildNumericEditor(ThemeData theme) {
+    if (_optionControllers.isEmpty) {
+      _optionControllers.add(TextEditingController());
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Target Numeric Answer',
+          style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Enter the correct number (decimals or integers allowed, e.g. 1969 or 3.14).',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        ),
+        const SizedBox(height: 10),
+        TextFormField(
+          controller: _optionControllers.first,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            hintText: 'e.g. 42 or 3.14',
+            prefixIcon: const Icon(Icons.numbers, color: AppColors.primary),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            filled: true,
+            fillColor: theme.colorScheme.surface,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 6. Ordering Editor
+  Widget _buildOrderingEditor(ThemeData theme) {
+    const stepLabels = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Correct Sequential Order (1st to Last)',
+                style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (_optionControllers.length < 6)
+              TextButton.icon(
+                onPressed: _addOption,
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add Item', style: TextStyle(fontSize: 12)),
+                style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+              ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Enter items in the correct order. They will be automatically scrambled for players.',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        ),
+        const SizedBox(height: 10),
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _optionControllers.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (context, optIdx) {
+            final color = _optionColors[optIdx % _optionColors.length];
+            final label = optIdx < stepLabels.length ? stepLabels[optIdx] : '${optIdx + 1}th';
+
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: color.withValues(alpha: 0.5)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _optionControllers[optIdx],
+                      decoration: InputDecoration(
+                        hintText: 'Item $label in order',
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_upward, size: 18),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Move Up',
+                    onPressed: optIdx > 0 ? () => _moveOrderingItem(optIdx, optIdx - 1) : null,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_downward, size: 18),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Move Down',
+                    onPressed: optIdx < _optionControllers.length - 1
+                        ? () => _moveOrderingItem(optIdx, optIdx + 1)
+                        : null,
+                  ),
+                  if (_optionControllers.length > 3)
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                      visualDensity: VisualDensity.compact,
+                      tooltip: 'Remove',
+                      onPressed: () => _removeOption(optIdx),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }
