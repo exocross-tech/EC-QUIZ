@@ -103,13 +103,14 @@ class HomeScreen extends ConsumerWidget {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 6),
-                                Row(
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 4,
                                   children: [
                                     _buildPill(
                                       '🏆 ${profile.totalPoints} pts',
                                       Colors.amber.shade300,
                                     ),
-                                    const SizedBox(width: 8),
                                     _buildPill(
                                       '🥇 ${profile.wins} wins',
                                       Colors.lightGreenAccent.shade100,

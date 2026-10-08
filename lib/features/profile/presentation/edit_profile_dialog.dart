@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -23,10 +24,9 @@ class EditProfileDialog extends ConsumerStatefulWidget {
   ConsumerState<EditProfileDialog> createState() => _EditProfileDialogState();
 }
 
-class _EditProfileDialogState extends ConsumerState<EditProfileDialog>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _EditProfileDialogState extends ConsumerState<EditProfileDialog> {
   late TextEditingController _nameController;
+  int _selectedTabIndex = 0; // 0: Emoji Presets, 1: Upload Photo
 
   late String _selectedEmojiId;
   late Color _selectedColor;
@@ -38,11 +38,7 @@ class _EditProfileDialogState extends ConsumerState<EditProfileDialog>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(
-      length: 2,
-      vsync: this,
-      initialIndex: widget.profile.avatarType == 'image' ? 1 : 0,
-    );
+    _selectedTabIndex = widget.profile.avatarType == 'image' ? 1 : 0;
     _nameController = TextEditingController(text: widget.profile.displayName);
     _selectedEmojiId = widget.profile.avatarPresetId;
 
@@ -64,7 +60,6 @@ class _EditProfileDialogState extends ConsumerState<EditProfileDialog>
 
   @override
   void dispose() {
-    _tabController.dispose();
     _nameController.dispose();
     super.dispose();
   }
@@ -127,7 +122,7 @@ class _EditProfileDialogState extends ConsumerState<EditProfileDialog>
       return;
     }
 
-    final isCustomImageTab = _tabController.index == 1;
+    final isCustomImageTab = _selectedTabIndex == 1;
 
     if (isCustomImageTab && (_customImageBase64 == null || _customImageBase64!.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -187,16 +182,24 @@ class _EditProfileDialogState extends ConsumerState<EditProfileDialog>
   @override
   Widget build(BuildContext context) {
     final isSaving = ref.watch(profileControllerProvider).isLoading;
+    final mediaQuery = MediaQuery.of(context);
+    final maxHeight = math.min(680.0, mediaQuery.size.height * 0.9);
 
     return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 440, maxHeight: 650),
+        constraints: BoxConstraints(
+          maxWidth: 440,
+          maxHeight: maxHeight,
+        ),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -210,205 +213,245 @@ class _EditProfileDialogState extends ConsumerState<EditProfileDialog>
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
 
-              // Display Name
-              CustomTextField(
-                controller: _nameController,
-                label: 'Display Name',
-                hint: 'Nickname',
-                prefixIcon: Icons.edit_outlined,
-              ),
-              const SizedBox(height: 16),
+              // Scrollable body
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Display Name
+                      CustomTextField(
+                        controller: _nameController,
+                        label: 'Display Name',
+                        hint: 'Nickname',
+                        prefixIcon: Icons.edit_outlined,
+                      ),
+                      const SizedBox(height: 16),
 
-              // Tab Bar: Preset vs Custom Image
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: TabBar(
-                  controller: _tabController,
-                  indicator: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.black87,
-                  labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-                  tabs: const [
-                    Tab(text: 'Emoji Presets'),
-                    Tab(text: 'Upload Photo'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
+                      // Tab selector
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setState(() => _selectedTabIndex = 0),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: _selectedTabIndex == 0
+                                        ? AppColors.primary
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'Emoji Presets',
+                                      style: TextStyle(
+                                        color: _selectedTabIndex == 0
+                                            ? Colors.white
+                                            : Colors.black87,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setState(() => _selectedTabIndex = 1),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: _selectedTabIndex == 1
+                                        ? AppColors.primary
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'Upload Photo',
+                                      style: TextStyle(
+                                        color: _selectedTabIndex == 1
+                                            ? Colors.white
+                                            : Colors.black87,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
 
-              // Tab Views
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    // Tab 1: Emoji presets
-                    SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          AvatarDisplay(
+                      // Tab Content
+                      if (_selectedTabIndex == 0) ...[
+                        // Preset Tab
+                        Center(
+                          child: AvatarDisplay(
                             avatarType: 'preset',
                             avatarPresetId: _selectedEmojiId,
                             avatarColor:
                                 '#${_selectedColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}',
                             radius: 38,
                           ),
-                          const SizedBox(height: 14),
-                          const Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              'Choose Emoji',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: AppConstants.defaultAvatarPresets.map((preset) {
-                              final isSelected = _selectedEmojiId == preset.id;
-                              return GestureDetector(
-                                onTap: () => setState(() => _selectedEmojiId = preset.id),
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? AppColors.primary.withValues(alpha: 0.2)
-                                        : Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: isSelected ? AppColors.primary : Colors.transparent,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    preset.emoji,
-                                    style: const TextStyle(fontSize: 24),
+                        ),
+                        const SizedBox(height: 14),
+                        const Text(
+                          'Choose Emoji',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: AppConstants.defaultAvatarPresets.map((preset) {
+                            final isSelected = _selectedEmojiId == preset.id;
+                            return GestureDetector(
+                              onTap: () => setState(() => _selectedEmojiId = preset.id),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.primary.withValues(alpha: 0.2)
+                                      : Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isSelected ? AppColors.primary : Colors.transparent,
+                                    width: 2,
                                   ),
                                 ),
-                              );
-                            }).toList(),
-                          ),
-                          const SizedBox(height: 14),
-                          const Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              'Choose Background Color',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: AppColors.avatarColors.map((color) {
-                              final isSelected = _selectedColor == color;
-                              return GestureDetector(
-                                onTap: () => setState(() => _selectedColor = color),
-                                child: Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: color,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: isSelected ? Colors.black : Colors.transparent,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: isSelected
-                                      ? const Icon(Icons.check, color: Colors.white, size: 16)
-                                      : null,
+                                child: Text(
+                                  preset.emoji,
+                                  style: const TextStyle(fontSize: 24),
                                 ),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Tab 2: Custom image upload
-                    SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          if (_isCompressing)
-                            const Padding(
-                              padding: EdgeInsets.all(24.0),
-                              child: Column(
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 14),
+                        const Text(
+                          'Choose Background Color',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: AppColors.avatarColors.map((color) {
+                            final isSelected = _selectedColor == color;
+                            return GestureDetector(
+                              onTap: () => setState(() => _selectedColor = color),
+                              child: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isSelected ? Colors.black : Colors.transparent,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: isSelected
+                                    ? const Icon(Icons.check, color: Colors.white, size: 16)
+                                    : null,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ] else ...[
+                        // Photo Upload Tab
+                        Center(
+                          child: Column(
+                            children: [
+                              if (_isCompressing)
+                                const Padding(
+                                  padding: EdgeInsets.all(20.0),
+                                  child: Column(
+                                    children: [
+                                      CircularProgressIndicator(),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        'Compressing under 200 KB on device...',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              else if (_customImageBase64 != null)
+                                AvatarDisplay(
+                                  avatarType: 'image',
+                                  avatarBase64: _customImageBase64,
+                                  radius: 44,
+                                )
+                              else
+                                CircleAvatar(
+                                  radius: 44,
+                                  backgroundColor: Colors.grey.shade200,
+                                  child: const Icon(Icons.image, size: 40, color: Colors.grey),
+                                ),
+                              const SizedBox(height: 8),
+                              if (_imageSizeFeedback != null)
+                                Text(
+                                  _imageSizeFeedback!,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.accent,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  CircularProgressIndicator(),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'Compressing under 200 KB on device...',
-                                    style: TextStyle(fontSize: 12),
+                                  OutlinedButton.icon(
+                                    onPressed: _isCompressing
+                                        ? null
+                                        : () => _pickImage(ImageSource.camera),
+                                    icon: const Icon(Icons.camera_alt, size: 18),
+                                    label: const Text('Camera'),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  ElevatedButton.icon(
+                                    onPressed: _isCompressing
+                                        ? null
+                                        : () => _pickImage(ImageSource.gallery),
+                                    icon: const Icon(Icons.photo_library, size: 18),
+                                    label: const Text('Gallery'),
                                   ),
                                 ],
                               ),
-                            )
-                          else if (_customImageBase64 != null)
-                            AvatarDisplay(
-                              avatarType: 'image',
-                              avatarBase64: _customImageBase64,
-                              radius: 44,
-                            )
-                          else
-                            CircleAvatar(
-                              radius: 44,
-                              backgroundColor: Colors.grey.shade200,
-                              child: const Icon(Icons.image, size: 40, color: Colors.grey),
-                            ),
-                          const SizedBox(height: 8),
-                          if (_imageSizeFeedback != null)
-                            Text(
-                              _imageSizeFeedback!,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.accent,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              OutlinedButton.icon(
-                                onPressed: _isCompressing
-                                    ? null
-                                    : () => _pickImage(ImageSource.camera),
-                                icon: const Icon(Icons.camera_alt, size: 18),
-                                label: const Text('Camera'),
-                              ),
-                              const SizedBox(width: 12),
-                              ElevatedButton.icon(
-                                onPressed: _isCompressing
-                                    ? null
-                                    : () => _pickImage(ImageSource.gallery),
-                                icon: const Icon(Icons.photo_library, size: 18),
-                                label: const Text('Gallery'),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Images are compressed below 200 KB and stored directly in Firestore (Free Spark Plan).',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 11, color: Colors.grey),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Images are compressed below 200 KB and stored directly in Firestore (Free Spark Plan).',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 11, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
 
+              // Save Button
               CustomButton(
                 label: 'Save Changes',
                 isLoading: isSaving || _isCompressing,

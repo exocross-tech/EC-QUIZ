@@ -49,11 +49,11 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDEMOKEYFORLOCALDEVANDTESTING1234567',
-    appId: '1:123456789012:web:abcdef0123456789',
-    messagingSenderId: '123456789012',
-    projectId: 'quiz-game-app-demo',
-    authDomain: 'quiz-game-app-demo.firebaseapp.com',
-    storageBucket: 'quiz-game-app-demo.appspot.com',
+    apiKey: 'AIzaSyCas217mlZ6GLvtKsdezE2WmHt-R217Kco',
+    appId: '1:179431012469:web:bdc479de9e6196e026e03c',
+    messagingSenderId: '179431012469',
+    projectId: 'quiz-game-app-3c75d',
+    authDomain: 'quiz-game-app-3c75d.firebaseapp.com',
+    storageBucket: 'quiz-game-app-3c75d.firebasestorage.app',
   );
 }
