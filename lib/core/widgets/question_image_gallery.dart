@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/image_utils.dart';
 
-/// Anti-flicker, performant image gallery for live quiz questions.
-/// Supports single image display and multi-image carousel.
+/// Anti-flicker, performant multi-image mosaic grid for live quiz questions.
+/// Displays:
+/// - 1 image: 1 full-width container
+/// - 2 images: 1 row with 2 side-by-side images
+/// - 3 images: Row 1 has 2 images side-by-side, Row 2 has the 3rd image centered
+/// - 4 images: 2x2 grid (2 in row 1, 2 in row 2)
 /// Uses static memory caching and [gaplessPlayback] to eliminate screen blink
-/// during 1-second timer rebuilds.
-class QuestionImageGallery extends StatefulWidget {
+/// during 1-second countdown rebuilds.
+class QuestionImageGallery extends StatelessWidget {
   final List<String> imagesBase64;
   final double maxHeight;
   final bool enableFullscreen;
@@ -28,7 +32,6 @@ class QuestionImageGallery extends StatefulWidget {
     }
     final bytes = ImageUtils.base64ToBytes(base64);
     if (bytes != null) {
-      // Keep cache size bounded (max 50 images in memory)
       if (_bytesCache.length > 50) {
         _bytesCache.remove(_bytesCache.keys.first);
       }
@@ -37,81 +40,21 @@ class QuestionImageGallery extends StatefulWidget {
     return bytes;
   }
 
-  @override
-  State<QuestionImageGallery> createState() => _QuestionImageGalleryState();
-}
+  void _showFullscreen(BuildContext context, List<String> validImages, int initialIndex) {
+    if (!enableFullscreen) return;
 
-class _QuestionImageGalleryState extends State<QuestionImageGallery> {
-  late PageController _pageController;
-  int _currentPage = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController();
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  void _showFullscreen(BuildContext context, Uint8List bytes, int index) {
-    if (!widget.enableFullscreen) return;
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.black87,
-        insetPadding: const EdgeInsets.all(12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            InteractiveViewer(
-              minScale: 0.8,
-              maxScale: 3.5,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.memory(
-                  bytes,
-                  fit: BoxFit.contain,
-                  gaplessPlayback: true,
-                ),
-              ),
-            ),
-            Positioned(
-              top: 8,
-              right: 8,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                onPressed: () => Navigator.of(ctx).pop(),
-              ),
-            ),
-            if (widget.imagesBase64.length > 1)
-              Positioned(
-                bottom: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Image ${index + 1} of ${widget.imagesBase64.length}',
-                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-          ],
-        ),
+      builder: (ctx) => _FullscreenGalleryDialog(
+        imagesBase64: validImages,
+        initialIndex: initialIndex,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final validImages = widget.imagesBase64
+    final validImages = imagesBase64
         .where((b) => b.trim().isNotEmpty)
         .toList();
 
@@ -119,17 +62,26 @@ class _QuestionImageGalleryState extends State<QuestionImageGallery> {
       return const SizedBox.shrink();
     }
 
-    // 1. Single Image View (Zero Flicker)
-    if (validImages.length == 1) {
-      final bytes = QuestionImageGallery.getCachedBytes(validImages.first);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 8),
+      child: _buildGridContent(context, validImages),
+    );
+  }
+
+  Widget _buildGridContent(BuildContext context, List<String> validImages) {
+    final count = validImages.length;
+
+    // Case 1: Single image
+    if (count == 1) {
+      final bytes = getCachedBytes(validImages.first);
       if (bytes == null) return const SizedBox.shrink();
 
-      return Padding(
-        padding: const EdgeInsets.only(top: 10, bottom: 8),
+      return Center(
         child: GestureDetector(
-          onTap: () => _showFullscreen(context, bytes, 0),
+          onTap: () => _showFullscreen(context, validImages, 0),
           child: Container(
-            constraints: BoxConstraints(maxHeight: widget.maxHeight),
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            width: double.infinity,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
               color: Colors.black.withValues(alpha: 0.04),
@@ -150,99 +102,114 @@ class _QuestionImageGalleryState extends State<QuestionImageGallery> {
       );
     }
 
-    // 2. Multi-Image Carousel View
-    return Padding(
-      padding: const EdgeInsets.only(top: 10, bottom: 8),
-      child: Column(
+    // Case 2: 2 images in a single row
+    if (count == 2) {
+      return Row(
+        children: [
+          _buildTile(context, validImages, 0, height: 125),
+          const SizedBox(width: 8),
+          _buildTile(context, validImages, 1, height: 125),
+        ],
+      );
+    }
+
+    // Case 3: 3 images (Row 1 has 2 images, Row 2 has 3rd centered)
+    if (count == 3) {
+      return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Stack(
-            alignment: Alignment.center,
+          Row(
             children: [
-              SizedBox(
-                height: widget.maxHeight,
-                child: PageView.builder(
-                  controller: _pageController,
-                  itemCount: validImages.length,
-                  onPageChanged: (page) => setState(() => _currentPage = page),
-                  itemBuilder: (context, index) {
-                    final bytes = QuestionImageGallery.getCachedBytes(validImages[index]);
-                    if (bytes == null) return const SizedBox.shrink();
+              _buildTile(context, validImages, 0, height: 105),
+              const SizedBox(width: 8),
+              _buildTile(context, validImages, 1, height: 105),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Spacer(flex: 1),
+              _buildTile(context, validImages, 2, height: 105, flex: 2),
+              const Spacer(flex: 1),
+            ],
+          ),
+        ],
+      );
+    }
 
-                    return GestureDetector(
-                      onTap: () => _showFullscreen(context, bytes, index),
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          color: Colors.black.withValues(alpha: 0.04),
-                          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
-                          child: Image.memory(
-                            bytes,
-                            fit: BoxFit.contain,
-                            gaplessPlayback: true,
-                            filterQuality: FilterQuality.medium,
-                            frameBuilder: (context, child, frame, wasSynchronouslyLoaded) => child,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+    // Case 4: 4 images (2x2 grid)
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            _buildTile(context, validImages, 0, height: 95),
+            const SizedBox(width: 8),
+            _buildTile(context, validImages, 1, height: 95),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _buildTile(context, validImages, 2, height: 95),
+            const SizedBox(width: 8),
+            _buildTile(context, validImages, 3, height: 95),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTile(
+    BuildContext context,
+    List<String> validImages,
+    int index, {
+    required double height,
+    int flex = 1,
+  }) {
+    final bytes = getCachedBytes(validImages[index]);
+    if (bytes == null) {
+      return Expanded(flex: flex, child: const SizedBox.shrink());
+    }
+
+    return Expanded(
+      flex: flex,
+      child: GestureDetector(
+        onTap: () => _showFullscreen(context, validImages, index),
+        child: Container(
+          height: height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.black.withValues(alpha: 0.04),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.memory(
+                  bytes,
+                  fit: BoxFit.contain,
+                  gaplessPlayback: true,
+                  filterQuality: FilterQuality.medium,
+                  frameBuilder: (context, child, frame, wasSynchronouslyLoaded) => child,
                 ),
               ),
-
-              // Left chevron button
-              if (_currentPage > 0)
-                Positioned(
-                  left: 6,
-                  child: IconButton.filledTonal(
-                    iconSize: 18,
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.chevron_left),
-                    onPressed: () {
-                      _pageController.previousPage(
-                        duration: const Duration(milliseconds: 250),
-                        curve: Curves.easeInOut,
-                      );
-                    },
-                  ),
-                ),
-
-              // Right chevron button
-              if (_currentPage < validImages.length - 1)
-                Positioned(
-                  right: 6,
-                  child: IconButton.filledTonal(
-                    iconSize: 18,
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.chevron_right),
-                    onPressed: () {
-                      _pageController.nextPage(
-                        duration: const Duration(milliseconds: 250),
-                        curve: Curves.easeInOut,
-                      );
-                    },
-                  ),
-                ),
-
-              // Floating page badge
               Positioned(
-                top: 8,
-                right: 12,
+                bottom: 4,
+                right: 6,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.65),
-                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.black.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    '${_currentPage + 1}/${validImages.length}',
+                    '${index + 1}',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 11,
+                      fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -250,27 +217,125 @@ class _QuestionImageGalleryState extends State<QuestionImageGallery> {
               ),
             ],
           ),
-          const SizedBox(height: 6),
+        ),
+      ),
+    );
+  }
+}
 
-          // Indicator dots
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              validImages.length,
-              (dotIndex) => AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                width: _currentPage == dotIndex ? 16 : 6,
-                height: 6,
+class _FullscreenGalleryDialog extends StatefulWidget {
+  final List<String> imagesBase64;
+  final int initialIndex;
+
+  const _FullscreenGalleryDialog({
+    required this.imagesBase64,
+    required this.initialIndex,
+  });
+
+  @override
+  State<_FullscreenGalleryDialog> createState() => _FullscreenGalleryDialogState();
+}
+
+class _FullscreenGalleryDialogState extends State<_FullscreenGalleryDialog> {
+  late PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.black87,
+      insetPadding: const EdgeInsets.all(12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          PageView.builder(
+            controller: _pageController,
+            itemCount: widget.imagesBase64.length,
+            onPageChanged: (page) => setState(() => _currentIndex = page),
+            itemBuilder: (context, index) {
+              final bytes = QuestionImageGallery.getCachedBytes(widget.imagesBase64[index]);
+              if (bytes == null) return const SizedBox.shrink();
+
+              return InteractiveViewer(
+                minScale: 0.8,
+                maxScale: 3.5,
+                child: Center(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.memory(
+                      bytes,
+                      fit: BoxFit.contain,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white, size: 28),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+          if (widget.imagesBase64.length > 1) ...[
+            if (_currentIndex > 0)
+              Positioned(
+                left: 8,
+                child: IconButton.filledTonal(
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: () {
+                    _pageController.previousPage(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                ),
+              ),
+            if (_currentIndex < widget.imagesBase64.length - 1)
+              Positioned(
+                right: 8,
+                child: IconButton.filledTonal(
+                  icon: const Icon(Icons.chevron_right),
+                  onPressed: () {
+                    _pageController.nextPage(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                ),
+              ),
+            Positioned(
+              bottom: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3),
-                  color: _currentPage == dotIndex
-                      ? AppColors.primary
-                      : Colors.grey.withValues(alpha: 0.35),
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${_currentIndex + 1} of ${widget.imagesBase64.length}',
+                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

@@ -1,7 +1,9 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/file_saver.dart';
 
 class QrCodeDialog extends StatelessWidget {
   final String joinCode;
@@ -31,10 +33,57 @@ class QrCodeDialog extends StatelessWidget {
     );
   }
 
+  String _buildQrData() {
+    try {
+      final base = Uri.base;
+      if (base.scheme == 'http' || base.scheme == 'https') {
+        return '${base.origin}/#/contests/join?code=$joinCode';
+      }
+    } catch (_) {}
+    return joinCode;
+  }
+
+  Future<void> _downloadQrCode(BuildContext context, String qrData) async {
+    try {
+      final painter = QrPainter(
+        data: qrData,
+        version: QrVersions.auto,
+        gapless: true,
+        color: AppColors.primary,
+        emptyColor: Colors.white,
+      );
+      final picData = await painter.toImageData(600, format: ui.ImageByteFormat.png);
+      if (picData != null) {
+        final bytes = picData.buffer.asUint8List();
+        FileSaver.saveFile(bytes, 'contest_qr_$joinCode.png');
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('QR Code saved as contest_qr_$joinCode.png!'),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save QR code: $e'),
+            backgroundColor: AppColors.gameRed,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hasPin = pin != null && pin!.isNotEmpty;
+    final qrData = _buildQrData();
+    final isUrl = qrData.startsWith('http://') || qrData.startsWith('https://');
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -64,9 +113,19 @@ class QrCodeDialog extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+
+            // Scan hint
+            Text(
+              isUrl ? 'Scan with phone camera to join' : 'Scan to join contest',
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
             const SizedBox(height: 12),
 
-            // QR Code Container
+            // QR Code Container with small download icon
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -80,26 +139,64 @@ class QrCodeDialog extends StatelessWidget {
                   ),
                 ],
               ),
-              child: QrImageView(
-                data: joinCode,
-                version: QrVersions.auto,
-                size: 200,
-                backgroundColor: Colors.white,
-                eyeStyle: const QrEyeStyle(
-                  eyeShape: QrEyeShape.square,
-                  color: AppColors.primary,
-                ),
-                dataModuleStyle: const QrDataModuleStyle(
-                  dataModuleShape: QrDataModuleShape.square,
-                  color: Colors.black87,
-                ),
+              child: Stack(
+                children: [
+                  QrImageView(
+                    data: qrData,
+                    version: QrVersions.auto,
+                    size: 200,
+                    backgroundColor: Colors.white,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: AppColors.primary,
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Tooltip(
+                      message: 'Download QR Code image',
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () => _downloadQrCode(context, qrData),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.grey.shade300),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.06),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.download_rounded,
+                              size: 18,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
 
             // Large Join Code
             Text(
-              'JOIN CODE',
+              'OR ENTER CODE',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -138,20 +235,42 @@ class QrCodeDialog extends StatelessWidget {
             ],
             const SizedBox(height: 16),
 
-            // Copy Code Button
-            OutlinedButton.icon(
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: joinCode));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Code $joinCode copied to clipboard!'),
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
+            // Copy Action Buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: joinCode));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Code $joinCode copied to clipboard!'),
+                        duration: const Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.copy, size: 18),
+                  label: const Text('Copy Code'),
+                ),
+                if (isUrl) ...[
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: qrData));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Join link copied to clipboard!'),
+                          duration: Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.link, size: 18),
+                    label: const Text('Copy Link'),
                   ),
-                );
-              },
-              icon: const Icon(Icons.copy, size: 18),
-              label: const Text('Copy Code'),
+                ],
+              ],
             ),
           ],
         ),

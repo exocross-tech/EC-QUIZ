@@ -26,9 +26,11 @@ class HostLobbyScreen extends ConsumerWidget {
     final participantsAsync = ref.watch(participantsStreamProvider(contestId));
     final hostController = ref.read(hostContestControllerProvider.notifier);
 
-    // If game has started, return HostGameScreen directly (single navbar, no nested Scaffold)
+    // If game has started or reached podium, return HostGameScreen directly
     final contest = contestAsync.asData?.value;
-    if (contest != null && contest.status == ContestStatus.inProgress) {
+    if (contest != null &&
+        (contest.status == ContestStatus.inProgress ||
+            contest.stage == ContestStage.podium)) {
       return HostGameScreen(contestId: contestId);
     }
 
@@ -69,7 +71,9 @@ class HostLobbyScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error loading contest: $e')),
         data: (contest) {
-          if (contest == null || contest.status == ContestStatus.ended) {
+          if (contest == null ||
+              (contest.status == ContestStatus.ended &&
+                  contest.stage != ContestStage.podium)) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -87,8 +91,9 @@ class HostLobbyScreen extends ConsumerWidget {
             );
           }
 
-          // Transition to live game screen once started
-          if (contest.status == ContestStatus.inProgress) {
+          // Transition to live game screen once started or reached podium
+          if (contest.status == ContestStatus.inProgress ||
+              contest.stage == ContestStage.podium) {
             return HostGameScreen(contestId: contestId);
           }
 

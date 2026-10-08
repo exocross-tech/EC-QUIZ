@@ -5,7 +5,12 @@ import '../../../../core/constants/app_colors.dart';
 import 'join_contest_controller.dart';
 
 class JoinContestScreen extends ConsumerStatefulWidget {
-  const JoinContestScreen({super.key});
+  final String? initialCode;
+
+  const JoinContestScreen({
+    super.key,
+    this.initialCode,
+  });
 
   @override
   ConsumerState<JoinContestScreen> createState() => _JoinContestScreenState();
@@ -18,6 +23,9 @@ class _JoinContestScreenState extends ConsumerState<JoinContestScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialCode != null && widget.initialCode!.trim().isNotEmpty) {
+      _codeController.text = widget.initialCode!.trim().toUpperCase();
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(joinContestControllerProvider.notifier).reset();
     });

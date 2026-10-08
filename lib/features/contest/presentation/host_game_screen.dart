@@ -78,46 +78,50 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
     final hostGameController = ref.read(hostGameControllerProvider.notifier);
     final hostGameState = ref.watch(hostGameControllerProvider);
 
+    final contest = contestAsync.asData?.value;
+    final isPodium = contest?.stage == ContestStage.podium;
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: Text(
-          contestAsync.asData?.value?.quizTitle ?? 'Live Contest',
+          isPodium ? 'Final Podium 🏆' : (contest?.quizTitle ?? 'Live Contest'),
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.qr_code_2),
-            tooltip: 'Show Join Code & QR',
-            onPressed: () {
-              final contest = contestAsync.asData?.value;
-              if (contest != null) {
-                QrCodeDialog.show(
-                  context: context,
-                  joinCode: contest.joinCode,
-                  quizTitle: contest.quizTitle,
-                  pin: contest.pin,
-                );
-              }
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.people_outline),
-            tooltip: 'View / Kick Players',
-            onPressed: () => _showPlayersModal(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close),
-            tooltip: 'End Contest Early',
-            onPressed: () => _confirmEndContest(context),
-          ),
-        ],
+        actions: isPodium
+            ? []
+            : [
+                IconButton(
+                  icon: const Icon(Icons.qr_code_2),
+                  tooltip: 'Show Join Code & QR',
+                  onPressed: () {
+                    if (contest != null) {
+                      QrCodeDialog.show(
+                        context: context,
+                        joinCode: contest.joinCode,
+                        quizTitle: contest.quizTitle,
+                        pin: contest.pin,
+                      );
+                    }
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.people_outline),
+                  tooltip: 'View / Kick Players',
+                  onPressed: () => _showPlayersModal(context),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  tooltip: 'End Contest Early',
+                  onPressed: () => _confirmEndContest(context),
+                ),
+              ],
       ),
       body: contestAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error loading contest: $e')),
         data: (contest) {
-          if (contest == null || contest.status == ContestStatus.ended && contest.stage != ContestStage.podium) {
+          if (contest == null || (contest.status == ContestStatus.ended && contest.stage != ContestStage.podium)) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

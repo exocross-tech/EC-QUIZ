@@ -68,7 +68,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/contests/join',
-        builder: (context, state) => const JoinContestScreen(),
+        builder: (context, state) {
+          final code = state.uri.queryParameters['code'];
+          return JoinContestScreen(initialCode: code);
+        },
       ),
       GoRoute(
         path: '/contests/host/:contestId',
