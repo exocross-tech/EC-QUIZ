@@ -69,7 +69,7 @@ class _JoinContestScreenState extends ConsumerState<JoinContestScreen> {
       if (success && mounted) {
         final contestId = ref.read(joinContestControllerProvider).contestFound?.id;
         if (contestId != null) {
-          context.pushReplacement('/contests/play/$contestId');
+          context.go('/contests/play/$contestId');
         }
       }
     } else {
@@ -87,7 +87,7 @@ class _JoinContestScreenState extends ConsumerState<JoinContestScreen> {
       if (contest != null && mounted) {
         final updatedState = ref.read(joinContestControllerProvider);
         if (!updatedState.needsPin && updatedState.isJoined) {
-          context.pushReplacement('/contests/play/${contest.id}');
+          context.go('/contests/play/${contest.id}');
         }
       }
     }

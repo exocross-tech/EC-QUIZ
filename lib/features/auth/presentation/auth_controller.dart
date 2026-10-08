@@ -65,6 +65,7 @@ class AuthController extends AsyncNotifier<void> {
         email: email,
         password: password,
       );
+      ref.read(guestUserProvider.notifier).clear();
       state = const AsyncValue.data(null);
       return true;
     } catch (e, st) {
@@ -78,6 +79,7 @@ class AuthController extends AsyncNotifier<void> {
     try {
       final authRepo = ref.read(authRepositoryProvider);
       await authRepo.signInAnonymously();
+      ref.read(guestUserProvider.notifier).clear();
       state = const AsyncValue.data(null);
       return true;
     } catch (e, st) {
@@ -120,6 +122,7 @@ class AuthController extends AsyncNotifier<void> {
       );
       await profileRepo.saveProfile(initialProfile);
 
+      ref.read(guestUserProvider.notifier).clear();
       state = const AsyncValue.data(null);
       return true;
     } catch (e, st) {
@@ -146,8 +149,10 @@ class AuthController extends AsyncNotifier<void> {
     try {
       final authRepo = ref.read(authRepositoryProvider);
       await authRepo.signOut();
+      ref.read(guestUserProvider.notifier).clear();
       state = const AsyncValue.data(null);
     } catch (e, st) {
+      ref.read(guestUserProvider.notifier).clear();
       state = AsyncValue.error(e, st);
     }
   }

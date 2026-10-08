@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/auth_controller.dart';
@@ -11,13 +12,33 @@ import '../../features/contest/presentation/host_lobby_screen.dart';
 import '../../features/contest/presentation/join_contest_screen.dart';
 import '../../features/contest/presentation/player_lobby_screen.dart';
 
+/// Bridges Riverpod reactive auth/guest state changes into GoRouter's refresh mechanism
+/// without destroying and re-instantiating the GoRouter instance.
+class RouterNotifier extends ChangeNotifier {
+  final Ref _ref;
+
+  RouterNotifier(this._ref) {
+    _ref.listen(authStateProvider, (_, __) => notifyListeners());
+    _ref.listen(guestUserProvider, (_, __) => notifyListeners());
+  }
+}
+
+final routerNotifierProvider = Provider<RouterNotifier>((ref) {
+  final notifier = RouterNotifier(ref);
+  ref.onDispose(() => notifier.dispose());
+  return notifier;
+});
+
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
-  final guestUser = ref.watch(guestUserProvider);
+  final notifier = ref.watch(routerNotifierProvider);
 
   return GoRouter(
+    refreshListenable: notifier,
     initialLocation: '/home',
     redirect: (context, state) {
+      final authState = ref.read(authStateProvider);
+      final guestUser = ref.read(guestUserProvider);
+
       final isLoading = authState.isLoading;
       final isAuthenticated = (authState.asData?.value != null) || (guestUser != null);
       final isAuthRoute =

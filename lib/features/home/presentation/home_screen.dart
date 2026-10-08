@@ -4,11 +4,38 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/widgets/avatar_display.dart';
+import '../../auth/domain/app_user.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../contest/presentation/create_contest_dialog.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
+
+  void _promptGuestAuth(BuildContext context, {required String actionTitle}) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('$actionTitle Requires Account'),
+        content: const Text(
+          'To create custom quizzes, upload questions, and host live game lobbies for other players, please create a free Quiz Clash account or sign in.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gameRed),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              context.push('/login');
+            },
+            child: const Text('Sign In / Register', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -51,7 +78,13 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
                 data: (profile) {
-                  if (profile == null) return const SizedBox.shrink();
+                  if (profile == null) {
+                    final guest = ref.watch(effectiveUserProvider);
+                    if (guest != null) {
+                      return _buildGuestHeader(context, guest);
+                    }
+                    return const SizedBox.shrink();
+                  }
 
                   return GestureDetector(
                     onTap: () => context.push('/profile'),
@@ -164,7 +197,14 @@ class HomeScreen extends ConsumerWidget {
                 icon: Icons.sensors,
                 color: AppColors.gameBlue,
                 buttonText: 'Host Contest',
-                onTap: () => CreateContestDialog.show(context: context),
+                onTap: () {
+                  final isGuest = ref.read(currentUserProfileProvider).asData?.value == null;
+                  if (isGuest) {
+                    _promptGuestAuth(context, actionTitle: 'Hosting Live Contests');
+                  } else {
+                    CreateContestDialog.show(context: context);
+                  }
+                },
               ),
               const SizedBox(height: 14),
 
@@ -176,7 +216,14 @@ class HomeScreen extends ConsumerWidget {
                 icon: Icons.quiz_outlined,
                 color: AppColors.gameGreen,
                 buttonText: 'Open Quiz Studio',
-                onTap: () => context.push('/quizzes'),
+                onTap: () {
+                  final isGuest = ref.read(currentUserProfileProvider).asData?.value == null;
+                  if (isGuest) {
+                    _promptGuestAuth(context, actionTitle: 'Quiz Studio');
+                  } else {
+                    context.push('/quizzes');
+                  }
+                },
               ),
               const SizedBox(height: 14),
 
@@ -279,6 +326,90 @@ class HomeScreen extends ConsumerWidget {
               const Icon(Icons.chevron_right, color: Colors.grey),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGuestHeader(BuildContext context, AppUser guest) {
+    final displayName = guest.displayName?.isNotEmpty == true
+        ? guest.displayName!
+        : 'Guest Player';
+
+    return GestureDetector(
+      onTap: () => context.push('/profile'),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.gameRed, Color(0xFFC01633)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.gameRed.withValues(alpha: 0.3),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const AvatarDisplay(
+              avatarType: 'preset',
+              avatarPresetId: 'lion',
+              avatarColor: '#E21B3C',
+              radius: 30,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Welcome to Quiz Clash,',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    displayName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      _buildPill(
+                        '🎮 Guest Mode',
+                        Colors.amber.shade200,
+                      ),
+                      _buildPill(
+                        'Tap to Sign Up',
+                        Colors.white,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white70,
+              size: 16,
+            ),
+          ],
         ),
       ),
     );

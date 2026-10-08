@@ -134,11 +134,16 @@ class JoinContestController extends Notifier<JoinContestState> {
           ? cleanNickname
           : (profile?.displayName ?? user.displayName ?? 'Player');
 
-      // Update displayName on user if provided and using real Firebase Auth
-      if (cleanNickname != null && cleanNickname.isNotEmpty && !user.uid.startsWith('guest_')) {
-        try {
-          await ref.read(authRepositoryProvider).updateDisplayName(cleanNickname);
-        } catch (_) {}
+      // Update displayName on user if provided
+      if (cleanNickname != null && cleanNickname.isNotEmpty) {
+        if (user.uid.startsWith('guest_')) {
+          user = user.copyWith(displayName: cleanNickname);
+          ref.read(guestUserProvider.notifier).setGuest(user);
+        } else {
+          try {
+            await ref.read(authRepositoryProvider).updateDisplayName(cleanNickname);
+          } catch (_) {}
+        }
       }
 
       final participant = ContestParticipant(

@@ -13,6 +13,20 @@ class AppUser {
 
   String get id => uid;
 
+  AppUser copyWith({
+    String? uid,
+    String? email,
+    String? displayName,
+    bool? isAnonymous,
+  }) {
+    return AppUser(
+      uid: uid ?? this.uid,
+      email: email ?? this.email,
+      displayName: displayName ?? this.displayName,
+      isAnonymous: isAnonymous ?? this.isAnonymous,
+    );
+  }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||

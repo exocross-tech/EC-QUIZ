@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/avatar_display.dart';
 import '../../../core/widgets/custom_button.dart';
+import '../../auth/domain/app_user.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../../core/theme/theme_controller.dart';
 import 'edit_profile_dialog.dart';
@@ -11,11 +13,19 @@ class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   void _showSignOutDialog(BuildContext context, WidgetRef ref) {
+    final effectiveUser = ref.read(effectiveUserProvider);
+    final isGuest = effectiveUser?.isAnonymous == true ||
+        (effectiveUser?.uid.startsWith('guest_') ?? false);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Log Out'),
-        content: const Text('Are you sure you want to log out of Quiz Clash?'),
+        title: Text(isGuest ? 'Exit Guest Mode' : 'Log Out'),
+        content: Text(
+          isGuest
+              ? 'Are you sure you want to exit your guest session? Any temporary nickname will be reset.'
+              : 'Are you sure you want to log out of Quiz Clash?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -27,7 +37,10 @@ class ProfileScreen extends ConsumerWidget {
               Navigator.of(ctx).pop();
               ref.read(authControllerProvider.notifier).signOut();
             },
-            child: const Text('Log Out', style: TextStyle(color: Colors.white)),
+            child: Text(
+              isGuest ? 'Exit Guest Mode' : 'Log Out',
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -69,7 +82,11 @@ class ProfileScreen extends ConsumerWidget {
         ),
         data: (profile) {
           if (profile == null) {
-            return const Center(child: Text('No profile found.'));
+            final guest = ref.watch(effectiveUserProvider);
+            if (guest != null) {
+              return _buildGuestProfile(context, ref, guest, theme, isDarkMode);
+            }
+            return const Center(child: Text('No profile found. Please sign in.'));
           }
 
           final winRate = profile.contestsPlayed > 0
@@ -330,6 +347,175 @@ class ProfileScreen extends ConsumerWidget {
                 color: color,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGuestProfile(
+    BuildContext context,
+    WidgetRef ref,
+    AppUser guestUser,
+    ThemeData theme,
+    bool isDarkMode,
+  ) {
+    final displayName = guestUser.displayName?.isNotEmpty == true
+        ? guestUser.displayName!
+        : 'Guest Player';
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Column(
+        children: [
+          // Guest Persona Card
+          Card(
+            elevation: 0,
+            color: theme.colorScheme.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: Colors.grey.withValues(alpha: 0.15)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: Column(
+                children: [
+                  const AvatarDisplay(
+                    avatarType: 'preset',
+                    avatarPresetId: 'lion',
+                    avatarColor: '#E21B3C',
+                    radius: 50,
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    displayName,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.gameYellow.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppColors.gameYellow.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.sports_esports, size: 14, color: AppColors.gameYellow),
+                        SizedBox(width: 6),
+                        Text(
+                          'Temporary Guest Session',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.gameYellow,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'You are playing without a permanent Quiz Clash account. Scores in active live games are saved for that contest, but career stats, trophies, and quiz creation require an account.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // CTA Buttons
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => context.push('/register'),
+                      icon: const Icon(Icons.person_add),
+                      label: const Text('Create Free Account'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.gameRed,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.push('/login'),
+                      icon: const Icon(Icons.login),
+                      label: const Text('Sign In to Existing Account'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Theme Settings Card
+          Card(
+            elevation: 0,
+            color: theme.colorScheme.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: Colors.grey.withValues(alpha: 0.15)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Dark Theme',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Switch(
+                    value: isDarkMode,
+                    onChanged: (val) {
+                      ref
+                          .read(themeModeControllerProvider.notifier)
+                          .setThemeMode(val ? ThemeMode.dark : ThemeMode.light);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Exit Guest Session button
+          CustomButton(
+            label: 'Exit Guest Mode',
+            isOutlined: true,
+            backgroundColor: AppColors.gameRed,
+            icon: Icons.logout,
+            onPressed: () => _showSignOutDialog(context, ref),
           ),
         ],
       ),
