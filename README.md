@@ -2,6 +2,9 @@
 
 A real-time, interactive multiplayer quiz game application built with Flutter & Firebase.
 
+Project Console: https://console.firebase.google.com/project/quiz-game-app-3c75d/overview
+Hosting URL: https://quiz-game-app-3c75d.web.app
+
 Features:
 - **Live Multiplayer Contests**: Host and join Kahoot-style real-time quiz battles with 6-character room codes and QR code scanning.
 - **Dynamic Leaderboards & Live Scores**: Real-time Firestore sync for answers, streaks, speed bonuses, and podium finishes.
