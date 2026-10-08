@@ -11,6 +11,9 @@ abstract class ContestRepository {
   /// Watches the real-time list of participants in a contest
   Stream<List<ContestParticipant>> watchParticipants(String contestId);
 
+  /// Fetches the participants of a contest
+  Future<List<ContestParticipant>> getParticipants(String contestId);
+
   /// Creates and launches a new contest from a Quiz with a unique 6-character code
   Future<Contest> createContest({
     required Quiz quiz,

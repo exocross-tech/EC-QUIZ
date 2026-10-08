@@ -57,8 +57,32 @@ void main() {
       await container.read(soundSettingProvider.notifier).toggleSound();
       expect(container.read(soundSettingProvider), isFalse);
 
-      await container.read(soundSettingProvider.notifier).toggleSound();
+      await container.read(soundSettingProvider.notifier).setSound(true);
       expect(container.read(soundSettingProvider), isTrue);
+
+      await container.read(soundSettingProvider.notifier).setSound(false);
+      expect(container.read(soundSettingProvider), isFalse);
+    });
+
+    test('SoundService manages background music (BGM) lifecycle and suppression', () async {
+      final service = SoundService();
+      expect(service.isBgmSuppressed, isFalse);
+
+      // Start, pause, resume BGM should execute cleanly without throwing
+      await service.startBgm();
+      await service.pauseBgm();
+      await service.resumeBgm();
+      await service.stopBgm();
+
+      // Suppress BGM (e.g. entering live contest or quiz editor)
+      service.setBgmSuppressed(true);
+      expect(service.isBgmSuppressed, isTrue);
+
+      // Unsuppress BGM (e.g. returning to Home / Profile)
+      service.setBgmSuppressed(false);
+      expect(service.isBgmSuppressed, isFalse);
+
+      service.dispose();
     });
   });
 

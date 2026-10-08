@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/game_animations.dart';
-import '../../../core/widgets/sound_toggle_button.dart';
+import '../../../core/services/sound_service.dart';
 import '../../quiz/data/firestore_quiz_repository.dart';
 
 import '../../quiz/domain/quiz.dart';
@@ -167,9 +167,6 @@ class _SoloGameScreenState extends ConsumerState<SoloGameScreen> {
           ),
           centerTitle: true,
           actions: [
-            // Sound Toggle
-            const SoundToggleButton(),
-
             // Animated Streak Flame
             if (state.streak > 0) ...[
               AnimatedStreakFlame(streak: state.streak),
@@ -470,6 +467,7 @@ class _SoloGameScreenState extends ConsumerState<SoloGameScreen> {
             return InkWell(
               borderRadius: BorderRadius.circular(16),
               onTap: () {
+                ref.read(soundServiceProvider).playClick();
                 controller.toggleOption(index, isMultiSelect: false);
                 controller.submitAnswer();
               },
@@ -524,7 +522,10 @@ class _SoloGameScreenState extends ConsumerState<SoloGameScreen> {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(14),
-                  onTap: () => controller.toggleOption(index, isMultiSelect: true),
+                  onTap: () {
+                    ref.read(soundServiceProvider).playClick();
+                    controller.toggleOption(index, isMultiSelect: true);
+                  },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
@@ -563,7 +564,10 @@ class _SoloGameScreenState extends ConsumerState<SoloGameScreen> {
               child: ElevatedButton.icon(
                 onPressed: state.selectedAnswers.isEmpty
                     ? null
-                    : () => controller.submitAnswer(),
+                    : () {
+                        ref.read(soundServiceProvider).playClick();
+                        controller.submitAnswer();
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.gameGreen,
                   foregroundColor: Colors.white,
@@ -602,6 +606,7 @@ class _SoloGameScreenState extends ConsumerState<SoloGameScreen> {
               onChanged: (val) => controller.setTextAnswer(val),
               onSubmitted: (_) {
                 if (_textInputController.text.trim().isNotEmpty) {
+                  ref.read(soundServiceProvider).playClick();
                   controller.submitAnswer();
                 }
               },
@@ -612,7 +617,10 @@ class _SoloGameScreenState extends ConsumerState<SoloGameScreen> {
               child: ElevatedButton.icon(
                 onPressed: state.textAnswer.trim().isEmpty
                     ? null
-                    : () => controller.submitAnswer(),
+                    : () {
+                        ref.read(soundServiceProvider).playClick();
+                        controller.submitAnswer();
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -647,6 +655,7 @@ class _SoloGameScreenState extends ConsumerState<SoloGameScreen> {
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _localOrderingList!.length,
               onReorder: (oldIndex, newIndex) {
+                ref.read(soundServiceProvider).playClick();
                 setState(() {
                   if (newIndex > oldIndex) newIndex -= 1;
                   final item = _localOrderingList!.removeAt(oldIndex);

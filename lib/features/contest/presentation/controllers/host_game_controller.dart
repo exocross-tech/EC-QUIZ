@@ -6,6 +6,7 @@ import 'package:quizapp/features/quiz/domain/quiz_question.dart';
 import 'package:quizapp/features/contest/data/firestore_contest_repository.dart';
 import 'package:quizapp/features/contest/domain/contest.dart';
 import 'package:quizapp/features/contest/domain/contest_participant.dart';
+import 'package:quizapp/features/auth/presentation/auth_controller.dart';
 
 class HostGameState {
   final bool isLoading;
@@ -212,6 +213,7 @@ class HostGameController extends Notifier<HostGameState> {
       } else {
         // Final question completed -> Show Podium!
         await contestRepo.showPodium(contest.id);
+        await _recordContestStats(contest.id);
       }
 
       state = state.copyWith(isLoading: false);
@@ -220,6 +222,40 @@ class HostGameController extends Notifier<HostGameState> {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
       return false;
     }
+  }
+
+  /// Records final points, wins, and contestsPlayed for registered participants upon podium finish
+  Future<void> _recordContestStats(String contestId) async {
+    try {
+      final participants =
+          await ref.read(contestRepositoryProvider).getParticipants(contestId);
+      if (participants.isEmpty) return;
+
+      int highestScore = -1;
+      for (final p in participants) {
+        if (p.totalScore > highestScore) {
+          highestScore = p.totalScore;
+        }
+      }
+
+      final profileRepo = ref.read(userProfileRepositoryProvider);
+
+      for (final p in participants) {
+        // Only record stats for registered users, skip guest/ephemeral players
+        if (p.id.startsWith('guest_') || p.id.startsWith('anon_')) {
+          continue;
+        }
+
+        final bool won = p.totalScore > 0 && p.totalScore == highestScore;
+        try {
+          await profileRepo.recordGameResults(
+            uid: p.id,
+            pointsEarned: p.totalScore,
+            won: won,
+          );
+        } catch (_) {}
+      }
+    } catch (_) {}
   }
 
   /// Host toggles countdown pause

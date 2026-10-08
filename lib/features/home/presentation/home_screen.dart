@@ -4,14 +4,27 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/widgets/avatar_display.dart';
-import '../../../core/widgets/sound_toggle_button.dart';
+import '../../../core/services/sound_service.dart';
 import '../../auth/domain/app_user.dart';
 
 import '../../auth/presentation/auth_controller.dart';
 import '../../contest/presentation/create_contest_dialog.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(soundServiceProvider).startBgm();
+    });
+  }
 
   void _promptGuestAuth(BuildContext context, {required String actionTitle}) {
     showDialog(
@@ -40,7 +53,7 @@ class HomeScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final profileAsync = ref.watch(currentUserProfileProvider);
     final theme = Theme.of(context);
 
@@ -52,7 +65,6 @@ class HomeScreen extends ConsumerWidget {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
-          const SoundToggleButton(),
           profileAsync.maybeWhen(
 
             data: (profile) {
@@ -312,7 +324,10 @@ class HomeScreen extends ConsumerWidget {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
+        onTap: () {
+          ref.read(soundServiceProvider).playClick();
+          onTap();
+        },
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(

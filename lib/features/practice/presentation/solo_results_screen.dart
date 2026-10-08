@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/sound_service.dart';
 import '../../../core/widgets/confetti_overlay.dart';
-import '../../../core/widgets/sound_toggle_button.dart';
 import 'solo_game_controller.dart';
 
 class SoloResultsScreen extends ConsumerStatefulWidget {
@@ -64,7 +63,6 @@ class _SoloResultsScreenState extends ConsumerState<SoloResultsScreen> {
         title: const Text('Practice Summary'),
         automaticallyImplyLeading: false,
         actions: [
-          const SoundToggleButton(),
           IconButton(
             tooltip: 'Home',
             icon: const Icon(Icons.home_rounded),

@@ -12,7 +12,6 @@ import 'package:quizapp/features/contest/presentation/widgets/leaderboard_view.d
 import 'package:quizapp/features/contest/presentation/widgets/participant_avatar_card.dart';
 import 'package:quizapp/features/contest/presentation/widgets/podium_view.dart';
 import 'package:quizapp/core/widgets/question_image_gallery.dart';
-import 'package:quizapp/core/widgets/sound_toggle_button.dart';
 import 'package:quizapp/features/contest/presentation/widgets/qr_code_dialog.dart';
 
 
@@ -122,9 +121,8 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: isPodium
-            ? [const SoundToggleButton()]
+            ? null
             : [
-                const SoundToggleButton(),
                 IconButton(
                   icon: const Icon(Icons.qr_code_2),
 

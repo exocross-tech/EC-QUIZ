@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:quizapp/core/constants/app_colors.dart';
 import 'package:quizapp/core/services/sound_service.dart';
 import 'package:quizapp/core/widgets/game_animations.dart';
-import 'package:quizapp/core/widgets/sound_toggle_button.dart';
 import 'package:quizapp/features/auth/presentation/auth_controller.dart';
 
 import 'package:quizapp/features/quiz/domain/quiz_question.dart';
@@ -108,7 +107,6 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
-          const SoundToggleButton(),
           IconButton(
             icon: const Icon(Icons.exit_to_app),
             tooltip: 'Leave Contest',
@@ -464,6 +462,7 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
               onTap: playerState.isSubmitting
                   ? null
                   : () async {
+                      ref.read(soundServiceProvider).playClick();
                       playerController.toggleOption(index, isMultiSelect: false);
                       await playerController.submitAnswer(
                         contestId: contest.id,
@@ -519,7 +518,10 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(14),
-                  onTap: () => playerController.toggleOption(index, isMultiSelect: true),
+                  onTap: () {
+                    ref.read(soundServiceProvider).playClick();
+                    playerController.toggleOption(index, isMultiSelect: true);
+                  },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
@@ -556,10 +558,13 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
               child: ElevatedButton.icon(
                 onPressed: playerState.selectedOptions.isEmpty || playerState.isSubmitting
                     ? null
-                    : () => playerController.submitAnswer(
+                    : () {
+                        ref.read(soundServiceProvider).playClick();
+                        playerController.submitAnswer(
                           contestId: contest.id,
                           questionIndex: contest.currentQuestionIndex,
-                        ),
+                        );
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.gameGreen,
                   foregroundColor: Colors.white,
@@ -595,10 +600,13 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
               child: ElevatedButton.icon(
                 onPressed: playerState.selectedOptions.isEmpty || playerState.isSubmitting
                     ? null
-                    : () => playerController.submitAnswer(
+                    : () {
+                        ref.read(soundServiceProvider).playClick();
+                        playerController.submitAnswer(
                           contestId: contest.id,
                           questionIndex: contest.currentQuestionIndex,
-                        ),
+                        );
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -632,6 +640,7 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
               itemCount: _orderingList!.length,
               // ignore: deprecated_member_use
               onReorder: (oldIndex, newIndex) {
+                ref.read(soundServiceProvider).playClick();
                 setState(() {
                   if (newIndex > oldIndex) newIndex -= 1;
                   final item = _orderingList!.removeAt(oldIndex);

@@ -89,6 +89,20 @@ class FirestoreContestRepository implements ContestRepository {
   }
 
   @override
+  Future<List<ContestParticipant>> getParticipants(String contestId) async {
+    final snapshot = await _contestsCollection
+        .doc(contestId)
+        .collection('participants')
+        .get();
+
+    final list = snapshot.docs
+        .map((doc) => ContestParticipant.fromMap(doc.data(), doc.id))
+        .toList();
+    list.sort((a, b) => b.totalScore.compareTo(a.totalScore));
+    return list;
+  }
+
+  @override
   Future<Contest> createContest({
     required Quiz quiz,
     required String hostId,

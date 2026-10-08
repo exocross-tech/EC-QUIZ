@@ -7,6 +7,7 @@ import '../../../core/widgets/custom_button.dart';
 import '../../auth/domain/app_user.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../../core/theme/theme_controller.dart';
+import '../../../core/services/sound_service.dart';
 import 'edit_profile_dialog.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -53,6 +54,7 @@ class ProfileScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final currentThemeMode = ref.watch(themeModeControllerProvider);
     final isDarkMode = currentThemeMode == ThemeMode.dark;
+    final isSoundEnabled = ref.watch(soundSettingProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -204,6 +206,74 @@ class ProfileScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 24),
+
+                // Sound Effects & Audio Card
+                Card(
+                  elevation: 0,
+                  color: theme.colorScheme.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: BorderSide(color: Colors.grey.withValues(alpha: 0.15)),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: isSoundEnabled
+                                ? AppColors.gameGreen.withValues(alpha: 0.18)
+                                : Colors.grey.withValues(alpha: 0.18),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            isSoundEnabled ? Icons.volume_up : Icons.volume_off,
+                            color: isSoundEnabled ? AppColors.gameGreen : Colors.grey,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Sound Effects & Audio',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isSoundEnabled
+                                    ? 'Sound effects & music active'
+                                    : 'Sound muted',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch(
+                          value: isSoundEnabled,
+                          activeTrackColor: AppColors.gameGreen,
+                          thumbIcon: WidgetStateProperty.resolveWith<Icon?>((states) {
+                            if (states.contains(WidgetState.selected)) {
+                              return const Icon(Icons.volume_up, size: 16, color: Colors.white);
+                            }
+                            return const Icon(Icons.volume_off, size: 16, color: Colors.grey);
+                          }),
+                          onChanged: (val) {
+                            ref.read(soundSettingProvider.notifier).setSound(val);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
 
                 // Theme Preference Card
                 Card(
@@ -363,6 +433,7 @@ class ProfileScreen extends ConsumerWidget {
     final displayName = guestUser.displayName?.isNotEmpty == true
         ? guestUser.displayName!
         : 'Guest Player';
+    final isSoundEnabled = ref.watch(soundSettingProvider);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -466,6 +537,47 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
+
+          // Sound Settings Card
+          Card(
+            elevation: 0,
+            color: theme.colorScheme.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: Colors.grey.withValues(alpha: 0.15)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        isSoundEnabled ? Icons.volume_up : Icons.volume_off,
+                        color: isSoundEnabled ? AppColors.gameGreen : Colors.grey,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Sound Effects & Audio',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Switch(
+                    value: isSoundEnabled,
+                    activeTrackColor: AppColors.gameGreen,
+                    onChanged: (val) {
+                      ref.read(soundSettingProvider.notifier).setSound(val);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
 
           // Theme Settings Card
           Card(

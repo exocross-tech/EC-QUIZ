@@ -55,7 +55,11 @@ void main() {
   );
   File('assets/audio/click.wav').writeAsBytesSync(clickBytes);
 
-  stdout.writeln('Successfully generated 6 WAV sound effects in assets/audio/!');
+  // 7. Looping Background Game Music (Upbeat 4-bar progression in C-G-Am-F)
+  final bgmBytes = synthesizeBgmLoop();
+  File('assets/audio/bgm_loop.wav').writeAsBytesSync(bgmBytes);
+
+  stdout.writeln('Successfully generated audio assets (including bgm_loop.wav) in assets/audio/!');
 }
 
 Uint8List buildWav({required List<int> samples, int sampleRate = 22050}) {
@@ -202,3 +206,117 @@ Uint8List synthesizeSweep({
 
   return buildWav(samples: samples, sampleRate: sampleRate);
 }
+
+Uint8List synthesizeBgmLoop({int sampleRate = 22050}) {
+  const bpm = 124.0;
+  const beatSec = 60.0 / bpm; // ~0.48387s
+  const totalBeats = 16; // 4 bars of 4 beats
+  final totalDuration = beatSec * totalBeats;
+  final numSamples = (sampleRate * totalDuration).round();
+  final buffer = List<double>.filled(numSamples, 0.0);
+
+  // 1. Bass track (C3, G2, A2, F2 with fun rhythmic cadence)
+  final bassNotes = [
+    130.81, 130.81, 130.81, 130.81, // C3
+    98.00,  98.00,  98.00,  123.47, // G2, G2, G2, B2
+    110.00, 110.00, 110.00, 110.00, // A2
+    87.31,  87.31,  87.31,  110.00, // F2, F2, F2, A2
+  ];
+
+  for (int beat = 0; beat < totalBeats; beat++) {
+    final noteFreq = bassNotes[beat];
+    final startIdx = (beat * beatSec * sampleRate).round();
+    final noteLength = (beatSec * 0.85 * sampleRate).round();
+    for (int i = 0; i < noteLength; i++) {
+      final idx = startIdx + i;
+      if (idx >= numSamples) break;
+      final t = i / sampleRate;
+      final env = exp(-i / (sampleRate * 0.28));
+      final bassWave = 0.7 * sin(2 * pi * noteFreq * t) + 0.3 * sin(2 * pi * (noteFreq * 2) * t);
+      buffer[idx] += bassWave * env * 0.32;
+    }
+  }
+
+  // 2. Upbeat playful 16th-note arpeggio / melody
+  final arpeggios = [
+    // Bar 1: C Major (C4, E4, G4, C5...)
+    [261.63, 329.63, 392.00, 523.25, 392.00, 329.63, 523.25, 659.25, 523.25, 392.00, 329.63, 261.63, 329.63, 392.00, 523.25, 659.25],
+    // Bar 2: G Major (G3, B3, D4, G4...)
+    [196.00, 246.94, 293.66, 392.00, 293.66, 246.94, 392.00, 587.33, 392.00, 293.66, 246.94, 196.00, 246.94, 293.66, 392.00, 493.88],
+    // Bar 3: A Minor (A3, C4, E4, A4...)
+    [220.00, 261.63, 329.63, 440.00, 329.63, 261.63, 440.00, 659.25, 440.00, 329.63, 261.63, 220.00, 261.63, 329.63, 440.00, 523.25],
+    // Bar 4: F Major (F3, A3, C4, F4...)
+    [174.61, 220.00, 261.63, 349.23, 261.63, 220.00, 349.23, 523.25, 349.23, 261.63, 220.00, 261.63, 329.63, 392.00, 493.88, 523.25],
+  ];
+
+  final sixteenthSec = beatSec / 4.0;
+  for (int bar = 0; bar < 4; bar++) {
+    final barNotes = arpeggios[bar];
+    for (int s = 0; s < 16; s++) {
+      final freq = barNotes[s];
+      final globalS = bar * 16 + s;
+      final startIdx = (globalS * sixteenthSec * sampleRate).round();
+      final len = (sixteenthSec * 0.9 * sampleRate).round();
+      for (int i = 0; i < len; i++) {
+        final idx = startIdx + i;
+        if (idx >= numSamples) break;
+        final t = i / sampleRate;
+        final env = exp(-i / (sampleRate * 0.08));
+        final wave = 0.6 * sin(2 * pi * freq * t) +
+            0.3 * sin(2 * pi * (freq * 2) * t) +
+            0.1 * sin(2 * pi * (freq * 3) * t);
+        buffer[idx] += wave * env * 0.22;
+      }
+    }
+  }
+
+  // 3. Gentle rhythmic percussion
+  final eighthSec = beatSec / 2.0;
+  for (int e = 0; e < totalBeats * 2; e++) {
+    final startIdx = (e * eighthSec * sampleRate).round();
+    final isBeat = (e % 2 == 0);
+    final beatNum = e ~/ 2;
+    final isBackbeat = (beatNum % 2 == 1 && isBeat); // Beats 2, 4, 6, 8...
+
+    if (isBackbeat) {
+      final len = (0.06 * sampleRate).round();
+      final random = Random(42 + e);
+      for (int i = 0; i < len; i++) {
+        final idx = startIdx + i;
+        if (idx >= numSamples) break;
+        final env = exp(-i / (sampleRate * 0.02));
+        final noise = (random.nextDouble() * 2.0 - 1.0);
+        buffer[idx] += noise * env * 0.12;
+      }
+    } else {
+      final len = (0.02 * sampleRate).round();
+      for (int i = 0; i < len; i++) {
+        final idx = startIdx + i;
+        if (idx >= numSamples) break;
+        final t = i / sampleRate;
+        final env = exp(-i / (sampleRate * 0.005));
+        buffer[idx] += sin(2 * pi * 1800 * t) * env * 0.04;
+      }
+    }
+  }
+
+  // 4. Smooth loop boundary crossfade (50ms) to ensure seamless endless looping without pop
+  final xfadeSamples = (0.05 * sampleRate).round();
+  for (int i = 0; i < xfadeSamples; i++) {
+    final frac = i / xfadeSamples;
+    final tailIdx = numSamples - xfadeSamples + i;
+    final headIdx = i;
+    final combinedHead = buffer[headIdx] * frac + buffer[tailIdx] * (1.0 - frac);
+    buffer[headIdx] = combinedHead;
+  }
+  final trimmedSamples = numSamples - xfadeSamples;
+
+  final finalSamples = <int>[];
+  for (int i = 0; i < trimmedSamples; i++) {
+    final val = (buffer[i].clamp(-1.0, 1.0) * 22000).round();
+    finalSamples.add(val);
+  }
+
+  return buildWav(samples: finalSamples, sampleRate: sampleRate);
+}
+

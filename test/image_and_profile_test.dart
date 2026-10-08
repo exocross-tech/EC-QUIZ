@@ -29,6 +29,31 @@ void main() {
       expect(deserialized.displayName, equals('MegaPlayer'));
       expect(deserialized.wins, equals(3));
     });
+
+    test('Computes win rate dynamically from contestsPlayed and wins', () {
+      final freshProfile = UserProfile(
+        uid: 'user_fresh',
+        email: 'fresh@example.com',
+        displayName: 'Newbie',
+        contestsPlayed: 0,
+        wins: 0,
+      );
+      final winRate0 = freshProfile.contestsPlayed > 0
+          ? '${((freshProfile.wins / freshProfile.contestsPlayed) * 100).toStringAsFixed(0)}%'
+          : '0%';
+      expect(winRate0, equals('0%'));
+
+      final updatedProfile = freshProfile.copyWith(
+        contestsPlayed: 10,
+        totalPoints: 12500,
+        wins: 7,
+      );
+      final winRateUpdated = updatedProfile.contestsPlayed > 0
+          ? '${((updatedProfile.wins / updatedProfile.contestsPlayed) * 100).toStringAsFixed(0)}%'
+          : '0%';
+      expect(winRateUpdated, equals('70%'));
+      expect(updatedProfile.totalPoints, equals(12500));
+    });
   });
 
   group('ImageUtils Compression Tests', () {

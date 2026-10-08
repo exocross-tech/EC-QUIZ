@@ -13,6 +13,7 @@ import '../../features/contest/presentation/join_contest_screen.dart';
 import '../../features/contest/presentation/player_lobby_screen.dart';
 import '../../features/practice/presentation/practice_quiz_select_screen.dart';
 import '../../features/practice/presentation/solo_game_screen.dart';
+import '../services/sound_service.dart';
 
 /// Bridges Riverpod reactive auth/guest state changes into GoRouter's refresh mechanism
 /// without destroying and re-instantiating the GoRouter instance.
@@ -51,6 +52,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isContestRoute =
           state.matchedLocation.startsWith('/contests/join') ||
           state.matchedLocation.startsWith('/contests/play');
+
+      // Context-aware BGM suppression: Turn off BGM during live contests or Quiz Studio/Builder
+      final isContestOrQuizRoute = state.matchedLocation.startsWith('/contests') ||
+          state.matchedLocation.startsWith('/quiz');
+      ref.read(soundServiceProvider).setBgmSuppressed(isContestOrQuizRoute);
 
       if (isLoading) return null;
 
