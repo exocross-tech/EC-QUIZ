@@ -219,26 +219,36 @@ class _QuizEditorScreenState extends ConsumerState<QuizEditorScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Icon(Icons.storage_outlined, size: 14, color: sizeColor),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Firestore Document Quota',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.onSurfaceVariant,
+                      Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.storage_outlined, size: 14, color: sizeColor),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                'Firestore Quota',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                      Text(
-                        '${sizeKb.toStringAsFixed(1)} KB / ${maxDocKb.toStringAsFixed(0)} KB (${(sizeRatio * 100).toStringAsFixed(1)}%)',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: sizeColor,
+                      const SizedBox(width: 8),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '${sizeKb.toStringAsFixed(1)} KB / ${maxDocKb.toStringAsFixed(0)} KB (${(sizeRatio * 100).toStringAsFixed(1)}%)',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: sizeColor,
+                          ),
                         ),
                       ),
                     ],
@@ -399,22 +409,29 @@ class _QuizEditorScreenState extends ConsumerState<QuizEditorScreen> {
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                       child: Row(
                         children: [
-                          Text(
-                            'Questions (${quiz.questionsCount})',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+                          Expanded(
+                            child: Wrap(
+                              spacing: 6,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  'Questions (${quiz.questionsCount})',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (quiz.questionsCount > 0)
+                                  Text(
+                                    '• ~${quiz.totalTimeSeconds}s • ${quiz.totalPoints} pts',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                           const SizedBox(width: 8),
-                          if (quiz.questionsCount > 0)
-                            Text(
-                              '• ~${quiz.totalTimeSeconds}s • ${quiz.totalPoints} pts',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          const Spacer(),
                           TextButton.icon(
                             onPressed: _openAddQuestionDialog,
                             icon: const Icon(Icons.add, size: 18),

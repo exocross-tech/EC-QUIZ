@@ -265,15 +265,19 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Text(
-                  'Edit Question ${widget.questionNumber}',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    'Edit Question ${widget.questionNumber}',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.close),
+                  visualDensity: VisualDensity.compact,
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -468,20 +472,19 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: _availablePoints.map((pts) {
                       final isSelected = _basePoints == pts;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: ChoiceChip(
-                          label: Text('$pts pts'),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() => _basePoints = pts);
-                            }
-                          },
-                        ),
+                      return ChoiceChip(
+                        label: Text('$pts pts'),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() => _basePoints = pts);
+                          }
+                        },
                       );
                     }).toList(),
                   ),
@@ -489,14 +492,16 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
 
                   // 5. Answer Options with Kahoot styling
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Answers (Tap circle to mark correct)',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          'Answers (Tap circle to mark correct)',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       if (_optionControllers.length < 6)
                         TextButton.icon(
                           onPressed: _addOption,
@@ -537,8 +542,8 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
                           children: [
                             // Symbol Icon badge
                             Container(
-                              width: 30,
-                              height: 30,
+                              width: 28,
+                              height: 28,
                               decoration: BoxDecoration(
                                 color: optColor,
                                 borderRadius: BorderRadius.circular(8),
@@ -549,12 +554,12 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 14,
+                                    fontSize: 13,
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 8),
 
                             // Option text input
                             Expanded(
@@ -564,6 +569,7 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
                                   hintText: 'Answer option ${optIdx + 1}',
                                   border: InputBorder.none,
                                   isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
                                 ),
                               ),
                             ),
@@ -571,6 +577,9 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
                             // Correct Answer toggle button
                             IconButton(
                               tooltip: isCorrect ? 'Correct Answer' : 'Mark as Correct',
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.all(4),
+                              constraints: const BoxConstraints(),
                               icon: Icon(
                                 isCorrect
                                     ? Icons.check_circle
@@ -578,18 +587,23 @@ class _QuestionEditorDialogState extends State<QuestionEditorDialog> {
                                 color: isCorrect
                                     ? optColor
                                     : Colors.grey,
-                                size: 26,
+                                size: 24,
                               ),
                               onPressed: () => _toggleCorrectAnswer(optIdx),
                             ),
 
                             // Delete option button (if > 2)
-                            if (_optionControllers.length > 2)
+                            if (_optionControllers.length > 2) ...[
+                              const SizedBox(width: 4),
                               IconButton(
                                 icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.all(4),
+                                constraints: const BoxConstraints(),
                                 tooltip: 'Remove Option',
                                 onPressed: () => _removeOption(optIdx),
                               ),
+                            ],
                           ],
                         ),
                       );

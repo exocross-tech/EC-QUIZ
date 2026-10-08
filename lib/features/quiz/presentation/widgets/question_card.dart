@@ -317,40 +317,48 @@ class QuestionCard extends StatelessWidget {
             const SizedBox(height: 12),
 
             // Bottom Badges: Timer & Points & Edit Button
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              alignment: WrapAlignment.spaceBetween,
               children: [
-                _buildBadge(
-                  Icons.timer_outlined,
-                  '${question.timeLimitSeconds}s',
-                  Colors.blue.shade700,
-                  theme,
-                ),
-                const SizedBox(width: 8),
-                _buildBadge(
-                  Icons.star_outline,
-                  '${question.basePoints} pts',
-                  Colors.amber.shade800,
-                  theme,
-                ),
-                if (!isValid) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade100,
-                      borderRadius: BorderRadius.circular(6),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildBadge(
+                      Icons.timer_outlined,
+                      '${question.timeLimitSeconds}s',
+                      Colors.blue.shade700,
+                      theme,
                     ),
-                    child: Text(
-                      'Needs completion',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.amber.shade900,
+                    const SizedBox(width: 8),
+                    _buildBadge(
+                      Icons.star_outline,
+                      '${question.basePoints} pts',
+                      Colors.amber.shade800,
+                      theme,
+                    ),
+                    if (!isValid) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade100,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Needs completion',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber.shade900,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ],
-                const Spacer(),
+                    ],
+                  ],
+                ),
                 TextButton.icon(
                   onPressed: onEdit,
                   style: TextButton.styleFrom(
