@@ -5,6 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/widgets/avatar_display.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../contest/presentation/create_contest_dialog.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -149,15 +150,8 @@ class HomeScreen extends ConsumerWidget {
                 subtitle: 'Enter 6-character code or scan QR',
                 icon: Icons.pin,
                 color: AppColors.gameRed,
-                buttonText: 'Join Game (Phase 3)',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Contest Joining & Lobby will be enabled in Phase 3!'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
+                buttonText: 'Join Game',
+                onTap: () => context.push('/contests/join'),
               ),
               const SizedBox(height: 14),
 
@@ -168,15 +162,8 @@ class HomeScreen extends ConsumerWidget {
                 subtitle: 'Launch a game session with real-time scoring',
                 icon: Icons.sensors,
                 color: AppColors.gameBlue,
-                buttonText: 'Host Contest (Phase 3)',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Contest Creation & Hosting will be enabled in Phase 3!'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
+                buttonText: 'Host Contest',
+                onTap: () => CreateContestDialog.show(context: context),
               ),
               const SizedBox(height: 14),
 

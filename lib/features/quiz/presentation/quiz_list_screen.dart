@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../domain/quiz.dart';
+import '../../contest/presentation/create_contest_dialog.dart';
 import 'quiz_list_controller.dart';
 
 class QuizListScreen extends ConsumerStatefulWidget {
@@ -303,7 +304,9 @@ class _QuizListScreenState extends ConsumerState<QuizListScreen>
                           PopupMenuButton<String>(
                             icon: const Icon(Icons.more_vert, size: 20),
                             onSelected: (val) {
-                              if (val == 'edit') {
+                              if (val == 'host') {
+                                CreateContestDialog.show(context: context, initialQuiz: quiz);
+                              } else if (val == 'edit') {
                                 context.push('/quiz/edit/${quiz.id}');
                               } else if (val == 'duplicate') {
                                 _duplicateQuiz(quiz);
@@ -312,6 +315,17 @@ class _QuizListScreenState extends ConsumerState<QuizListScreen>
                               }
                             },
                             itemBuilder: (context) => [
+                              if (!quiz.isDraft)
+                                const PopupMenuItem(
+                                  value: 'host',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.sensors, color: AppColors.gameBlue, size: 18),
+                                      SizedBox(width: 8),
+                                      Text('Host Contest', style: TextStyle(color: AppColors.gameBlue, fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                ),
                               const PopupMenuItem(
                                 value: 'edit',
                                 child: Row(

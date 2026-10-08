@@ -1,0 +1,226 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
+import '../../quiz/domain/quiz.dart';
+import '../domain/contest.dart';
+import '../domain/contest_participant.dart';
+import 'contest_repository.dart';
+
+final contestRepositoryProvider = Provider<ContestRepository>((ref) {
+  return FirestoreContestRepository();
+});
+
+final contestStreamProvider =
+    StreamProvider.family<Contest?, String>((ref, contestId) {
+  return ref.watch(contestRepositoryProvider).watchContest(contestId);
+});
+
+final participantsStreamProvider =
+    StreamProvider.family<List<ContestParticipant>, String>((ref, contestId) {
+  return ref.watch(contestRepositoryProvider).watchParticipants(contestId);
+});
+
+class FirestoreContestRepository implements ContestRepository {
+  final FirebaseFirestore _firestore;
+
+  FirestoreContestRepository({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  CollectionReference<Map<String, dynamic>> get _contestsCollection =>
+      _firestore.collection('contests');
+
+  @override
+  Stream<Contest?> watchContest(String contestId) {
+    return _contestsCollection.doc(contestId).snapshots().map((doc) {
+      if (!doc.exists || doc.data() == null) return null;
+      return Contest.fromMap(doc.data()!, doc.id);
+    });
+  }
+
+  @override
+  Stream<List<ContestParticipant>> watchParticipants(String contestId) {
+    return _contestsCollection
+        .doc(contestId)
+        .collection('participants')
+        .snapshots()
+        .map((snapshot) {
+      final list = snapshot.docs
+          .map((doc) => ContestParticipant.fromMap(doc.data(), doc.id))
+          .toList();
+      list.sort((a, b) => a.joinedAt.compareTo(b.joinedAt));
+      return list;
+    });
+  }
+
+  @override
+  Future<Contest> createContest({
+    required Quiz quiz,
+    required String hostId,
+    required String hostName,
+    String? pin,
+    int maxParticipants = 20,
+  }) async {
+    // Generate a unique 6-character code
+    String joinCode = Contest.generateJoinCode();
+    int attempts = 0;
+    while (attempts < 5) {
+      final existing = await findContestByJoinCode(joinCode);
+      if (existing == null) break;
+      joinCode = Contest.generateJoinCode();
+      attempts++;
+    }
+
+    final contestId = const Uuid().v4();
+    final now = DateTime.now();
+
+    final contest = Contest(
+      id: contestId,
+      quizId: quiz.id,
+      quizTitle: quiz.title,
+      quizThemeColor: quiz.themeColor,
+      questionsCount: quiz.questionsCount,
+      hostId: hostId,
+      hostName: hostName,
+      joinCode: joinCode,
+      pin: pin != null && pin.trim().isNotEmpty ? pin.trim() : null,
+      maxParticipants: maxParticipants,
+      status: ContestStatus.lobby,
+      currentQuestionIndex: -1,
+      kickedUserIds: const [],
+      participantCount: 0,
+      createdAt: now,
+    );
+
+    await _contestsCollection.doc(contestId).set(contest.toMap());
+    return contest;
+  }
+
+  @override
+  Future<Contest?> findContestByJoinCode(String joinCode) async {
+    final cleanCode = joinCode.trim().toUpperCase();
+    final query = await _contestsCollection
+        .where('joinCode', isEqualTo: cleanCode)
+        .where('status', isEqualTo: 'lobby')
+        .limit(1)
+        .get();
+
+    if (query.docs.isEmpty) return null;
+    final doc = query.docs.first;
+    return Contest.fromMap(doc.data(), doc.id);
+  }
+
+  @override
+  Future<void> joinContest({
+    required String contestId,
+    required ContestParticipant participant,
+    String? pinEntered,
+  }) async {
+    final contestDoc = await _contestsCollection.doc(contestId).get();
+    if (!contestDoc.exists || contestDoc.data() == null) {
+      throw Exception('Contest does not exist.');
+    }
+
+    final contest = Contest.fromMap(contestDoc.data()!, contestDoc.id);
+
+    if (contest.status != ContestStatus.lobby) {
+      throw Exception('This contest has already started or ended.');
+    }
+
+    if (contest.kickedUserIds.contains(participant.id)) {
+      throw Exception('You were removed from this contest lobby by the host.');
+    }
+
+    if (contest.hasPin) {
+      if (pinEntered == null || pinEntered.trim() != contest.pin) {
+        throw Exception('Incorrect contest PIN. Please check with the host.');
+      }
+    }
+
+    if (contest.participantCount >= contest.maxParticipants) {
+      throw Exception(
+        'Lobby is full! Max players (${contest.maxParticipants}) reached.',
+      );
+    }
+
+    // Write participant doc
+    final participantRef = _contestsCollection
+        .doc(contestId)
+        .collection('participants')
+        .doc(participant.id);
+
+    final isAlreadyJoined = (await participantRef.get()).exists;
+
+    await participantRef.set(participant.toMap(), SetOptions(merge: true));
+
+    if (!isAlreadyJoined) {
+      await _contestsCollection.doc(contestId).update({
+        'participantCount': FieldValue.increment(1),
+      });
+    }
+  }
+
+  @override
+  Future<void> kickParticipant({
+    required String contestId,
+    required String participantId,
+  }) async {
+    // Add to kickedUserIds on contest document and decrement count
+    await _contestsCollection.doc(contestId).update({
+      'kickedUserIds': FieldValue.arrayUnion([participantId]),
+      'participantCount': FieldValue.increment(-1),
+    });
+
+    // Remove from participants subcollection
+    await _contestsCollection
+        .doc(contestId)
+        .collection('participants')
+        .doc(participantId)
+        .delete();
+  }
+
+  @override
+  Future<void> leaveContest({
+    required String contestId,
+    required String participantId,
+  }) async {
+    final participantRef = _contestsCollection
+        .doc(contestId)
+        .collection('participants')
+        .doc(participantId);
+
+    final exists = (await participantRef.get()).exists;
+    if (exists) {
+      await participantRef.delete();
+      await _contestsCollection.doc(contestId).update({
+        'participantCount': FieldValue.increment(-1),
+      });
+    }
+  }
+
+  @override
+  Future<void> updateContestStatus({
+    required String contestId,
+    required ContestStatus status,
+  }) async {
+    final Map<String, dynamic> updateData = {
+      'status': status.toDbValue,
+    };
+
+    if (status == ContestStatus.inProgress) {
+      updateData['startedAt'] = FieldValue.serverTimestamp();
+      updateData['currentQuestionIndex'] = 0;
+    } else if (status == ContestStatus.ended) {
+      updateData['endedAt'] = FieldValue.serverTimestamp();
+    }
+
+    await _contestsCollection.doc(contestId).update(updateData);
+  }
+
+  @override
+  Future<void> endContest(String contestId) async {
+    await updateContestStatus(
+      contestId: contestId,
+      status: ContestStatus.ended,
+    );
+  }
+}

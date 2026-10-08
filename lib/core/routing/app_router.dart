@@ -7,6 +7,9 @@ import '../../features/home/presentation/home_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/quiz/presentation/quiz_editor_screen.dart';
 import '../../features/quiz/presentation/quiz_list_screen.dart';
+import '../../features/contest/presentation/host_lobby_screen.dart';
+import '../../features/contest/presentation/join_contest_screen.dart';
+import '../../features/contest/presentation/player_lobby_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
@@ -61,6 +64,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final quizId = state.pathParameters['quizId'];
           return QuizEditorScreen(quizId: quizId);
+        },
+      ),
+      GoRoute(
+        path: '/contests/join',
+        builder: (context, state) => const JoinContestScreen(),
+      ),
+      GoRoute(
+        path: '/contests/host/:contestId',
+        builder: (context, state) {
+          final contestId = state.pathParameters['contestId'] ?? '';
+          return HostLobbyScreen(contestId: contestId);
+        },
+      ),
+      GoRoute(
+        path: '/contests/play/:contestId',
+        builder: (context, state) {
+          final contestId = state.pathParameters['contestId'] ?? '';
+          return PlayerLobbyScreen(contestId: contestId);
         },
       ),
     ],
