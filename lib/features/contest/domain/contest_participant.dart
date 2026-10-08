@@ -9,6 +9,9 @@ class ContestParticipant {
   final String? avatarBase64;
   final DateTime joinedAt;
   final int totalScore;
+  final int lastPointsEarned;
+  final int streak;
+  final bool? isCorrectLastAnswer;
 
   const ContestParticipant({
     required this.id,
@@ -19,6 +22,9 @@ class ContestParticipant {
     this.avatarBase64,
     required this.joinedAt,
     this.totalScore = 0,
+    this.lastPointsEarned = 0,
+    this.streak = 0,
+    this.isCorrectLastAnswer,
   });
 
   ContestParticipant copyWith({
@@ -30,6 +36,9 @@ class ContestParticipant {
     String? avatarBase64,
     DateTime? joinedAt,
     int? totalScore,
+    int? lastPointsEarned,
+    int? streak,
+    bool? isCorrectLastAnswer,
   }) {
     return ContestParticipant(
       id: id ?? this.id,
@@ -40,6 +49,9 @@ class ContestParticipant {
       avatarBase64: avatarBase64 ?? this.avatarBase64,
       joinedAt: joinedAt ?? this.joinedAt,
       totalScore: totalScore ?? this.totalScore,
+      lastPointsEarned: lastPointsEarned ?? this.lastPointsEarned,
+      streak: streak ?? this.streak,
+      isCorrectLastAnswer: isCorrectLastAnswer ?? this.isCorrectLastAnswer,
     );
   }
 
@@ -53,6 +65,9 @@ class ContestParticipant {
       'avatarBase64': avatarBase64,
       'joinedAt': Timestamp.fromDate(joinedAt),
       'totalScore': totalScore,
+      'lastPointsEarned': lastPointsEarned,
+      'streak': streak,
+      'isCorrectLastAnswer': isCorrectLastAnswer,
     };
   }
 
@@ -72,6 +87,9 @@ class ContestParticipant {
       avatarBase64: map['avatarBase64'] as String?,
       joinedAt: parseDate(map['joinedAt']),
       totalScore: (map['totalScore'] as num?)?.toInt() ?? 0,
+      lastPointsEarned: (map['lastPointsEarned'] as num?)?.toInt() ?? 0,
+      streak: (map['streak'] as num?)?.toInt() ?? 0,
+      isCorrectLastAnswer: map['isCorrectLastAnswer'] as bool?,
     );
   }
 }

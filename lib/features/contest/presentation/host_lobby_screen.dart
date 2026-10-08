@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../data/firestore_contest_repository.dart';
 import '../domain/contest.dart';
+import 'controllers/host_game_controller.dart';
 import 'host_contest_controller.dart';
+import 'host_game_screen.dart';
 import 'widgets/participant_avatar_card.dart';
 import 'widgets/qr_code_dialog.dart';
 
@@ -72,6 +74,11 @@ class HostLobbyScreen extends ConsumerWidget {
                 ],
               ),
             );
+          }
+
+          // Transition to live game screen once started
+          if (contest.status == ContestStatus.inProgress) {
+            return HostGameScreen(contestId: contestId);
           }
 
           return SafeArea(
@@ -287,13 +294,17 @@ class HostLobbyScreen extends ConsumerWidget {
                             child: ElevatedButton.icon(
                               onPressed: hasPlayers
                                   ? () async {
-                                      final success = await hostController.startContest(contest.id);
-                                      if (success && context.mounted) {
+                                      final success = await ref
+                                          .read(hostGameControllerProvider.notifier)
+                                          .startLiveGame(
+                                            contestId: contest.id,
+                                            quizId: contest.quizId,
+                                          );
+                                      if (!success && context.mounted) {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(
-                                            content: Text('Contest Started! (Phase 4 Live Gameplay)'),
-                                            behavior: SnackBarBehavior.floating,
-                                            backgroundColor: AppColors.accent,
+                                            content: Text('Failed to start contest. Check that the quiz has questions.'),
+                                            backgroundColor: AppColors.gameRed,
                                           ),
                                         );
                                       }

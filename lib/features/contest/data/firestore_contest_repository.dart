@@ -2,7 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../quiz/domain/quiz.dart';
+import '../../quiz/domain/quiz_question.dart';
 import '../domain/contest.dart';
+import '../domain/contest_answer.dart';
 import '../domain/contest_participant.dart';
 import 'contest_repository.dart';
 
@@ -18,6 +20,40 @@ final contestStreamProvider =
 final participantsStreamProvider =
     StreamProvider.family<List<ContestParticipant>, String>((ref, contestId) {
   return ref.watch(contestRepositoryProvider).watchParticipants(contestId);
+});
+
+class ParticipantAnswerQuery {
+  final String contestId;
+  final String participantId;
+  final int questionIndex;
+
+  const ParticipantAnswerQuery({
+    required this.contestId,
+    required this.participantId,
+    required this.questionIndex,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ParticipantAnswerQuery &&
+          runtimeType == other.runtimeType &&
+          contestId == other.contestId &&
+          participantId == other.participantId &&
+          questionIndex == other.questionIndex;
+
+  @override
+  int get hashCode =>
+      contestId.hashCode ^ participantId.hashCode ^ questionIndex.hashCode;
+}
+
+final participantAnswerStreamProvider =
+    StreamProvider.family<ContestAnswer?, ParticipantAnswerQuery>((ref, query) {
+  return ref.watch(contestRepositoryProvider).watchParticipantAnswer(
+        contestId: query.contestId,
+        participantId: query.participantId,
+        questionIndex: query.questionIndex,
+      );
 });
 
 class FirestoreContestRepository implements ContestRepository {
@@ -47,7 +83,7 @@ class FirestoreContestRepository implements ContestRepository {
       final list = snapshot.docs
           .map((doc) => ContestParticipant.fromMap(doc.data(), doc.id))
           .toList();
-      list.sort((a, b) => a.joinedAt.compareTo(b.joinedAt));
+      list.sort((a, b) => b.totalScore.compareTo(a.totalScore));
       return list;
     });
   }
@@ -85,6 +121,7 @@ class FirestoreContestRepository implements ContestRepository {
       pin: pin != null && pin.trim().isNotEmpty ? pin.trim() : null,
       maxParticipants: maxParticipants,
       status: ContestStatus.lobby,
+      stage: ContestStage.lobby,
       currentQuestionIndex: -1,
       kickedUserIds: const [],
       participantCount: 0,
@@ -164,13 +201,11 @@ class FirestoreContestRepository implements ContestRepository {
     required String contestId,
     required String participantId,
   }) async {
-    // Add to kickedUserIds on contest document and decrement count
     await _contestsCollection.doc(contestId).update({
       'kickedUserIds': FieldValue.arrayUnion([participantId]),
       'participantCount': FieldValue.increment(-1),
     });
 
-    // Remove from participants subcollection
     await _contestsCollection
         .doc(contestId)
         .collection('participants')
@@ -209,8 +244,10 @@ class FirestoreContestRepository implements ContestRepository {
     if (status == ContestStatus.inProgress) {
       updateData['startedAt'] = FieldValue.serverTimestamp();
       updateData['currentQuestionIndex'] = 0;
+      updateData['stage'] = ContestStage.questionActive.name;
     } else if (status == ContestStatus.ended) {
       updateData['endedAt'] = FieldValue.serverTimestamp();
+      updateData['stage'] = ContestStage.ended.name;
     }
 
     await _contestsCollection.doc(contestId).update(updateData);
@@ -222,5 +259,214 @@ class FirestoreContestRepository implements ContestRepository {
       contestId: contestId,
       status: ContestStatus.ended,
     );
+  }
+
+  // --- LIVE GAMEPLAY IMPLEMENTATION ---
+
+  @override
+  Future<void> startLiveGame({
+    required String contestId,
+    required QuizQuestion firstQuestion,
+  }) async {
+    final activeQ = ActiveQuestion(
+      text: firstQuestion.text,
+      type: firstQuestion.type,
+      options: firstQuestion.options,
+      timeLimitSeconds: firstQuestion.timeLimitSeconds,
+      basePoints: firstQuestion.basePoints,
+      imageBase64: firstQuestion.imageBase64,
+      explanation: null,
+      correctAnswers: const [], // anti-cheat: empty during question
+    );
+
+    await _contestsCollection.doc(contestId).update({
+      'status': ContestStatus.inProgress.toDbValue,
+      'stage': ContestStage.questionActive.name,
+      'startedAt': FieldValue.serverTimestamp(),
+      'currentQuestionIndex': 0,
+      'questionOpenedAt': FieldValue.serverTimestamp(),
+      'activeQuestion': activeQ.toMap(),
+      'answerDistribution': <String, int>{},
+      'answersSubmittedCount': 0,
+      'isPaused': false,
+    });
+  }
+
+  @override
+  Future<void> submitAnswer({
+    required String contestId,
+    required String participantId,
+    required String participantName,
+    required int questionIndex,
+    required List<dynamic> selectedAnswers,
+  }) async {
+    final answerRef = _contestsCollection
+        .doc(contestId)
+        .collection('answers')
+        .doc('${participantId}_$questionIndex');
+
+    final existing = await answerRef.get();
+    if (existing.exists) return; // Prevent double submission
+
+    await answerRef.set({
+      'participantId': participantId,
+      'participantName': participantName,
+      'questionIndex': questionIndex,
+      'selectedAnswers': selectedAnswers,
+      'submittedAt': FieldValue.serverTimestamp(),
+      'pointsAwarded': 0,
+      'isCorrect': false,
+      'responseTimeSeconds': 0.0,
+    });
+
+    await _contestsCollection.doc(contestId).update({
+      'answersSubmittedCount': FieldValue.increment(1),
+    });
+  }
+
+  @override
+  Stream<ContestAnswer?> watchParticipantAnswer({
+    required String contestId,
+    required String participantId,
+    required int questionIndex,
+  }) {
+    return _contestsCollection
+        .doc(contestId)
+        .collection('answers')
+        .doc('${participantId}_$questionIndex')
+        .snapshots()
+        .map((doc) {
+      if (!doc.exists || doc.data() == null) return null;
+      return ContestAnswer.fromMap(doc.data()!, doc.id);
+    });
+  }
+
+  @override
+  Future<List<ContestAnswer>> getQuestionAnswers({
+    required String contestId,
+    required int questionIndex,
+  }) async {
+    final snapshot = await _contestsCollection
+        .doc(contestId)
+        .collection('answers')
+        .where('questionIndex', isEqualTo: questionIndex)
+        .get();
+
+    return snapshot.docs
+        .map((doc) => ContestAnswer.fromMap(doc.data(), doc.id))
+        .toList();
+  }
+
+  @override
+  Future<void> revealAnswers({
+    required String contestId,
+    required int questionIndex,
+    required List<int> correctAnswers,
+    String? explanation,
+    required Map<String, int> distribution,
+    required Map<String, int> participantPoints,
+    required Map<String, bool> participantCorrectness,
+    required Map<String, int> participantStreaks,
+  }) async {
+    final batch = _firestore.batch();
+
+    // 1. Update participant scores and streaks
+    for (final entry in participantPoints.entries) {
+      final pid = entry.key;
+      final pts = entry.value;
+      final isCorrect = participantCorrectness[pid] ?? false;
+      final streak = participantStreaks[pid] ?? 0;
+
+      final pRef = _contestsCollection
+          .doc(contestId)
+          .collection('participants')
+          .doc(pid);
+
+      batch.update(pRef, {
+        'totalScore': FieldValue.increment(pts),
+        'lastPointsEarned': pts,
+        'streak': streak,
+        'isCorrectLastAnswer': isCorrect,
+      });
+
+      // Update answer record
+      final aRef = _contestsCollection
+          .doc(contestId)
+          .collection('answers')
+          .doc('${pid}_$questionIndex');
+
+      batch.update(aRef, {
+        'pointsAwarded': pts,
+        'isCorrect': isCorrect,
+      });
+    }
+
+    // 2. Update contest doc to answerReveal
+    final contestRef = _contestsCollection.doc(contestId);
+    final Map<String, dynamic> contestUpdate = {
+      'stage': ContestStage.answerReveal.name,
+      'answerDistribution': distribution,
+      'activeQuestion.correctAnswers': correctAnswers,
+    };
+    if (explanation != null && explanation.trim().isNotEmpty) {
+      contestUpdate['activeQuestion.explanation'] = explanation;
+    }
+    batch.update(contestRef, contestUpdate);
+
+    await batch.commit();
+  }
+
+  @override
+  Future<void> showLeaderboard(String contestId) async {
+    await _contestsCollection.doc(contestId).update({
+      'stage': ContestStage.leaderboard.name,
+    });
+  }
+
+  @override
+  Future<void> nextQuestion({
+    required String contestId,
+    required int nextIndex,
+    required QuizQuestion nextQuestion,
+  }) async {
+    final activeQ = ActiveQuestion(
+      text: nextQuestion.text,
+      type: nextQuestion.type,
+      options: nextQuestion.options,
+      timeLimitSeconds: nextQuestion.timeLimitSeconds,
+      basePoints: nextQuestion.basePoints,
+      imageBase64: nextQuestion.imageBase64,
+      explanation: null,
+      correctAnswers: const [], // anti-cheat: empty during question
+    );
+
+    await _contestsCollection.doc(contestId).update({
+      'stage': ContestStage.questionActive.name,
+      'currentQuestionIndex': nextIndex,
+      'questionOpenedAt': FieldValue.serverTimestamp(),
+      'activeQuestion': activeQ.toMap(),
+      'answerDistribution': <String, int>{},
+      'answersSubmittedCount': 0,
+      'isPaused': false,
+    });
+  }
+
+  @override
+  Future<void> showPodium(String contestId) async {
+    await _contestsCollection.doc(contestId).update({
+      'stage': ContestStage.podium.name,
+      'status': ContestStatus.ended.toDbValue,
+      'endedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  @override
+  Future<void> setContestPaused({
+    required String contestId,
+    required bool isPaused,
+  }) async {
+    await _contestsCollection.doc(contestId).update({
+      'isPaused': isPaused,
+    });
   }
 }

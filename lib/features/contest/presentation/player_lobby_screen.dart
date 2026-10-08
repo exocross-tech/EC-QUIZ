@@ -7,6 +7,7 @@ import '../../auth/presentation/auth_controller.dart';
 import '../data/firestore_contest_repository.dart';
 import '../domain/contest.dart';
 import 'join_contest_controller.dart';
+import 'player_game_screen.dart';
 import 'widgets/participant_avatar_card.dart';
 
 class PlayerLobbyScreen extends ConsumerStatefulWidget {
@@ -92,30 +93,9 @@ class _PlayerLobbyScreenState extends ConsumerState<PlayerLobbyScreen> {
             return const SizedBox.shrink();
           }
 
-          // Check if game started
-          if (contest.status == ContestStatus.inProgress) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const CircularProgressIndicator(color: AppColors.accent),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Game Started!',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Get ready for "${contest.quizTitle}"...\n(Phase 4 Live Gameplay)',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-              ),
-            );
+          // Transition to live game screen once started
+          if (contest.status == ContestStatus.inProgress || contest.stage == ContestStage.podium) {
+            return PlayerGameScreen(contestId: widget.contestId);
           }
 
           return SafeArea(

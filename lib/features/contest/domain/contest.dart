@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../quiz/domain/quiz_question.dart';
 
 enum ContestStatus {
   lobby,
@@ -31,6 +32,90 @@ enum ContestStatus {
   }
 }
 
+enum ContestStage {
+  lobby,
+  starting,
+  questionActive,
+  answerReveal,
+  leaderboard,
+  podium,
+  ended;
+
+  static ContestStage fromString(String? val) {
+    switch (val) {
+      case 'starting':
+        return ContestStage.starting;
+      case 'questionActive':
+        return ContestStage.questionActive;
+      case 'answerReveal':
+        return ContestStage.answerReveal;
+      case 'leaderboard':
+        return ContestStage.leaderboard;
+      case 'podium':
+        return ContestStage.podium;
+      case 'ended':
+        return ContestStage.ended;
+      case 'lobby':
+      default:
+        return ContestStage.lobby;
+    }
+  }
+}
+
+class ActiveQuestion {
+  final String text;
+  final QuestionType type;
+  final List<String> options;
+  final int timeLimitSeconds;
+  final int basePoints;
+  final String? imageBase64;
+  final String? explanation;
+  final List<int> correctAnswers; // Empty during questionActive (anti-cheat), populated during answerReveal
+
+  const ActiveQuestion({
+    required this.text,
+    required this.type,
+    required this.options,
+    required this.timeLimitSeconds,
+    required this.basePoints,
+    this.imageBase64,
+    this.explanation,
+    this.correctAnswers = const [],
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'text': text,
+      'type': type.name,
+      'options': options,
+      'timeLimitSeconds': timeLimitSeconds,
+      'basePoints': basePoints,
+      if (imageBase64 != null) 'imageBase64': imageBase64,
+      if (explanation != null) 'explanation': explanation,
+      'correctAnswers': correctAnswers,
+    };
+  }
+
+  factory ActiveQuestion.fromMap(Map<String, dynamic> map) {
+    return ActiveQuestion(
+      text: map['text'] as String? ?? '',
+      type: QuestionType.fromString(map['type'] as String?),
+      options: (map['options'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      timeLimitSeconds: (map['timeLimitSeconds'] as num?)?.toInt() ?? 20,
+      basePoints: (map['basePoints'] as num?)?.toInt() ?? 1000,
+      imageBase64: map['imageBase64'] as String?,
+      explanation: map['explanation'] as String?,
+      correctAnswers: (map['correctAnswers'] as List<dynamic>?)
+              ?.map((e) => (e as num).toInt())
+              .toList() ??
+          [],
+    );
+  }
+}
+
 class Contest {
   final String id;
   final String quizId;
@@ -43,12 +128,18 @@ class Contest {
   final String? pin;
   final int maxParticipants;
   final ContestStatus status;
+  final ContestStage stage;
   final int currentQuestionIndex;
   final List<String> kickedUserIds;
   final int participantCount;
   final DateTime createdAt;
   final DateTime? startedAt;
   final DateTime? endedAt;
+  final ActiveQuestion? activeQuestion;
+  final DateTime? questionOpenedAt;
+  final Map<String, int> answerDistribution;
+  final int answersSubmittedCount;
+  final bool isPaused;
 
   const Contest({
     required this.id,
@@ -62,18 +153,26 @@ class Contest {
     this.pin,
     this.maxParticipants = 20,
     this.status = ContestStatus.lobby,
+    this.stage = ContestStage.lobby,
     this.currentQuestionIndex = -1,
     this.kickedUserIds = const [],
     this.participantCount = 0,
     required this.createdAt,
     this.startedAt,
     this.endedAt,
+    this.activeQuestion,
+    this.questionOpenedAt,
+    this.answerDistribution = const {},
+    this.answersSubmittedCount = 0,
+    this.isPaused = false,
   });
 
   bool get hasPin => pin != null && pin!.trim().isNotEmpty;
 
   bool get isJoinable =>
-      status == ContestStatus.lobby && participantCount < maxParticipants;
+      status == ContestStatus.lobby &&
+      stage == ContestStage.lobby &&
+      participantCount < maxParticipants;
 
   /// Generates a readable 6-character code avoiding visually ambiguous characters
   static String generateJoinCode() {
@@ -94,12 +193,18 @@ class Contest {
     String? pin,
     int? maxParticipants,
     ContestStatus? status,
+    ContestStage? stage,
     int? currentQuestionIndex,
     List<String>? kickedUserIds,
     int? participantCount,
     DateTime? createdAt,
     DateTime? startedAt,
     DateTime? endedAt,
+    ActiveQuestion? activeQuestion,
+    DateTime? questionOpenedAt,
+    Map<String, int>? answerDistribution,
+    int? answersSubmittedCount,
+    bool? isPaused,
   }) {
     return Contest(
       id: id ?? this.id,
@@ -113,12 +218,18 @@ class Contest {
       pin: pin ?? this.pin,
       maxParticipants: maxParticipants ?? this.maxParticipants,
       status: status ?? this.status,
+      stage: stage ?? this.stage,
       currentQuestionIndex: currentQuestionIndex ?? this.currentQuestionIndex,
       kickedUserIds: kickedUserIds ?? List.from(this.kickedUserIds),
       participantCount: participantCount ?? this.participantCount,
       createdAt: createdAt ?? this.createdAt,
       startedAt: startedAt ?? this.startedAt,
       endedAt: endedAt ?? this.endedAt,
+      activeQuestion: activeQuestion ?? this.activeQuestion,
+      questionOpenedAt: questionOpenedAt ?? this.questionOpenedAt,
+      answerDistribution: answerDistribution ?? this.answerDistribution,
+      answersSubmittedCount: answersSubmittedCount ?? this.answersSubmittedCount,
+      isPaused: isPaused ?? this.isPaused,
     );
   }
 
@@ -135,12 +246,18 @@ class Contest {
       'pin': pin?.trim(),
       'maxParticipants': maxParticipants,
       'status': status.toDbValue,
+      'stage': stage.name,
       'currentQuestionIndex': currentQuestionIndex,
       'kickedUserIds': kickedUserIds,
       'participantCount': participantCount,
       'createdAt': Timestamp.fromDate(createdAt),
       'startedAt': startedAt != null ? Timestamp.fromDate(startedAt!) : null,
       'endedAt': endedAt != null ? Timestamp.fromDate(endedAt!) : null,
+      'activeQuestion': activeQuestion?.toMap(),
+      'questionOpenedAt': questionOpenedAt != null ? Timestamp.fromDate(questionOpenedAt!) : null,
+      'answerDistribution': answerDistribution,
+      'answersSubmittedCount': answersSubmittedCount,
+      'isPaused': isPaused,
     };
   }
 
@@ -156,6 +273,15 @@ class Contest {
             .toList() ??
         <String>[];
 
+    final distMap = (map['answerDistribution'] as Map<dynamic, dynamic>?)
+            ?.map((k, v) => MapEntry(k.toString(), (v as num).toInt())) ??
+        <String, int>{};
+
+    ActiveQuestion? aq;
+    if (map['activeQuestion'] != null && map['activeQuestion'] is Map<String, dynamic>) {
+      aq = ActiveQuestion.fromMap(map['activeQuestion'] as Map<String, dynamic>);
+    }
+
     return Contest(
       id: docId,
       quizId: map['quizId'] as String? ?? '',
@@ -168,12 +294,18 @@ class Contest {
       pin: map['pin'] as String?,
       maxParticipants: (map['maxParticipants'] as num?)?.toInt() ?? 20,
       status: ContestStatus.fromString(map['status'] as String?),
+      stage: ContestStage.fromString(map['stage'] as String?),
       currentQuestionIndex: (map['currentQuestionIndex'] as num?)?.toInt() ?? -1,
       kickedUserIds: kicked,
       participantCount: (map['participantCount'] as num?)?.toInt() ?? 0,
       createdAt: parseDate(map['createdAt']),
       startedAt: map['startedAt'] != null ? parseDate(map['startedAt']) : null,
       endedAt: map['endedAt'] != null ? parseDate(map['endedAt']) : null,
+      activeQuestion: aq,
+      questionOpenedAt: map['questionOpenedAt'] != null ? parseDate(map['questionOpenedAt']) : null,
+      answerDistribution: distMap,
+      answersSubmittedCount: (map['answersSubmittedCount'] as num?)?.toInt() ?? 0,
+      isPaused: map['isPaused'] as bool? ?? false,
     );
   }
 }

@@ -52,7 +52,7 @@ void main() {
 
     test('base64ToBytes correctly strips data URI prefixes', () {
       const sample = 'SGVsbG8gV29ybGQ='; // "Hello World"
-      const withPrefix = 'data:image/jpeg;base64,SGVsbG8gV29ybGQ=';
+      const withPrefix = 'data:image/jpeg;base64,$sample';
 
       final bytes = ImageUtils.base64ToBytes(withPrefix);
       expect(bytes, isNotNull);
