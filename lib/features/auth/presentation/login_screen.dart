@@ -301,7 +301,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       color: Colors.transparent,
                       child: InkWell(
                         borderRadius: BorderRadius.circular(18),
-                        onTap: isLoading ? null : () => context.push('/contests/join'),
+                        onTap: isLoading
+                            ? null
+                            : () async {
+                                try {
+                                  await ref
+                                      .read(authControllerProvider.notifier)
+                                      .signInAnonymously();
+                                } catch (_) {}
+                                if (context.mounted) {
+                                  context.push('/contests/join');
+                                }
+                              },
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           child: Row(

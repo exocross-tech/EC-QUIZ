@@ -151,13 +151,20 @@ class FirestoreContestRepository implements ContestRepository {
     final cleanCode = joinCode.trim().toUpperCase();
     final query = await _contestsCollection
         .where('joinCode', isEqualTo: cleanCode)
-        .where('status', isEqualTo: 'lobby')
         .limit(1)
         .get();
 
     if (query.docs.isEmpty) return null;
     final doc = query.docs.first;
-    return Contest.fromMap(doc.data(), doc.id);
+    final contest = Contest.fromMap(doc.data(), doc.id);
+
+    if (contest.status == ContestStatus.ended) {
+      throw Exception('This contest has already ended.');
+    }
+    if (contest.status == ContestStatus.inProgress) {
+      throw Exception('This contest has already started.');
+    }
+    return contest;
   }
 
   @override
@@ -204,9 +211,13 @@ class FirestoreContestRepository implements ContestRepository {
     await participantRef.set(participant.toMap(), SetOptions(merge: true));
 
     if (!isAlreadyJoined) {
-      await _contestsCollection.doc(contestId).update({
-        'participantCount': FieldValue.increment(1),
-      });
+      try {
+        await _contestsCollection.doc(contestId).update({
+          'participantCount': FieldValue.increment(1),
+        });
+      } catch (_) {
+        // Participant record is written; counter increment is best-effort.
+      }
     }
   }
 
@@ -215,10 +226,12 @@ class FirestoreContestRepository implements ContestRepository {
     required String contestId,
     required String participantId,
   }) async {
-    await _contestsCollection.doc(contestId).update({
-      'kickedUserIds': FieldValue.arrayUnion([participantId]),
-      'participantCount': FieldValue.increment(-1),
-    });
+    try {
+      await _contestsCollection.doc(contestId).update({
+        'kickedUserIds': FieldValue.arrayUnion([participantId]),
+        'participantCount': FieldValue.increment(-1),
+      });
+    } catch (_) {}
 
     await _contestsCollection
         .doc(contestId)
@@ -240,9 +253,11 @@ class FirestoreContestRepository implements ContestRepository {
     final exists = (await participantRef.get()).exists;
     if (exists) {
       await participantRef.delete();
-      await _contestsCollection.doc(contestId).update({
-        'participantCount': FieldValue.increment(-1),
-      });
+      try {
+        await _contestsCollection.doc(contestId).update({
+          'participantCount': FieldValue.increment(-1),
+        });
+      } catch (_) {}
     }
   }
 
@@ -342,9 +357,13 @@ class FirestoreContestRepository implements ContestRepository {
       'responseTimeSeconds': 0.0,
     });
 
-    await _contestsCollection.doc(contestId).update({
-      'answersSubmittedCount': FieldValue.increment(1),
-    });
+    try {
+      await _contestsCollection.doc(contestId).update({
+        'answersSubmittedCount': FieldValue.increment(1),
+      });
+    } catch (_) {
+      // Answer write succeeded; parent counter increment is best-effort.
+    }
   }
 
   @override

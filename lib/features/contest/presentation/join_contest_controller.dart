@@ -59,6 +59,27 @@ class JoinContestController extends Notifier<JoinContestState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
+      // Seamlessly ensure user identity exists (Anonymous Auth or guest) before querying Firestore
+      var user = ref.read(effectiveUserProvider);
+      if (user == null) {
+        try {
+          final authRepo = ref.read(authRepositoryProvider);
+          user = await authRepo.signInAnonymously();
+        } catch (_) {
+          final cleanNick = nickname?.trim();
+          final guestId =
+              'guest_${DateTime.now().millisecondsSinceEpoch}_${const Uuid().v4().substring(0, 8)}';
+          user = AppUser(
+            uid: guestId,
+            displayName: (cleanNick != null && cleanNick.isNotEmpty)
+                ? cleanNick
+                : 'Player',
+            isAnonymous: true,
+          );
+          ref.read(guestUserProvider.notifier).setGuest(user);
+        }
+      }
+
       final repo = ref.read(contestRepositoryProvider);
       final contest = await repo.findContestByJoinCode(cleanCode);
 
@@ -87,9 +108,15 @@ class JoinContestController extends Notifier<JoinContestState> {
       }
       return null;
     } catch (e) {
+      final raw = e.toString().replaceFirst('Exception: ', '');
+      final friendlyError = raw.contains('permission-denied')
+          ? 'Database permission error. Make sure Firestore rules allow reading contests.'
+          : (raw.contains('network') || raw.contains('unavailable'))
+              ? 'Network connection issue. Please check your internet connection.'
+              : raw;
       state = state.copyWith(
         isLoading: false,
-        errorMessage: e.toString().replaceFirst('Exception: ', ''),
+        errorMessage: friendlyError,
       );
       return null;
     }

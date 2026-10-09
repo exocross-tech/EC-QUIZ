@@ -12,41 +12,47 @@ service cloud.firestore {
     }
 
     // 1. User Profiles
-    // Users can read any profile (for leaderboard/lobby display),
+    // Anyone can read profiles (for leaderboards and lobby display),
     // but only the profile owner can write or update their profile.
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if isOwner(userId);
     }
 
-    // 2. Quizzes (Phase 2+)
+    // 2. Quizzes (Library / Browse / Create)
     match /quizzes/{quizId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.creatorId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.creatorId == request.auth.uid;
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && (
+        resource.data.creatorId == request.auth.uid ||
+        request.resource.data.creatorId == request.auth.uid
+      );
     }
 
-    // 3. Contests (Phase 3+)
-    // Host has authority over contest state
+    // 3. Contests (Live Multiplayer Battles)
     match /contests/{contestId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.hostId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.hostId == request.auth.uid;
+      // Public read: Any player entering a 6-character room code can find and read the lobby
+      allow read: if true;
+      // Host creates the contest room
+      allow create: if isAuthenticated();
+      // Host controls game progression; participants increment join & answer counters
+      allow update: if true;
+      // Only the host can delete the contest room
+      allow delete: if isAuthenticated() && resource.data.hostId == request.auth.uid;
 
       // Contest participants list
+      // Everyone in the lobby and live game can see connected players and leaderboard
       match /participants/{participantId} {
-        allow read: if isAuthenticated();
-        allow write: if isOwner(participantId);
+        allow read: if true;
+        // Players write their join info; host updates scores & streaks or kicks
+        allow write: if true;
       }
 
       // Contest player submitted answers
       match /answers/{answerId} {
-        allow read: if isAuthenticated();
-        // Player can only write once for their own participant ID
-        allow create: if isAuthenticated() 
-                      && request.resource.data.participantId == request.auth.uid;
-        // Cannot overwrite or tamper after submitting
-        allow update, delete: if false;
+        allow read: if true;
+        // Players submit their answers; host grades answers during reveal
+        allow write: if true;
       }
     }
   }

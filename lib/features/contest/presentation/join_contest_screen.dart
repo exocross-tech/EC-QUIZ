@@ -28,9 +28,14 @@ class _JoinContestScreenState extends ConsumerState<JoinContestScreen> {
     if (widget.initialCode != null && widget.initialCode!.trim().isNotEmpty) {
       _codeController.text = widget.initialCode!.trim().toUpperCase();
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (mounted) {
         ref.read(joinContestControllerProvider.notifier).reset();
+        if (ref.read(effectiveUserProvider) == null) {
+          try {
+            await ref.read(authRepositoryProvider).signInAnonymously();
+          } catch (_) {}
+        }
         final user = ref.read(effectiveUserProvider);
         final profile = ref.read(currentUserProfileProvider).asData?.value;
         final name = profile?.displayName ?? user?.displayName;
