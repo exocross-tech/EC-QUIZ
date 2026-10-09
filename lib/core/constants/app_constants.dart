@@ -12,6 +12,7 @@ class AvatarPreset {
 
 class AppConstants {
   static const String appName = 'EC QUIZ';
+  static const String logoPath = 'assets/images/logo.png';
   static const String webHostingUrl = 'https://quiz-game-app-3c75d.web.app';
 
   // Base64 & Firestore document limits

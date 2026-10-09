@@ -13,6 +13,7 @@ import '../../features/contest/presentation/join_contest_screen.dart';
 import '../../features/contest/presentation/player_lobby_screen.dart';
 import '../../features/practice/presentation/practice_quiz_select_screen.dart';
 import '../../features/practice/presentation/solo_game_screen.dart';
+import '../../features/splash/presentation/splash_screen.dart';
 import '../services/sound_service.dart';
 
 /// Bridges Riverpod reactive auth/guest state changes into GoRouter's refresh mechanism
@@ -37,10 +38,14 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     refreshListenable: notifier,
-    initialLocation: '/home',
+    initialLocation: '/splash',
     redirect: (context, state) {
       final authState = ref.read(authStateProvider);
       final guestUser = ref.read(guestUserProvider);
+
+      if (state.matchedLocation == '/splash') {
+        return null;
+      }
 
       final isLoading = authState.isLoading;
       final firebaseUser = authState.asData?.value;
@@ -86,6 +91,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
